@@ -79,52 +79,6 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // ── Auto-create student row if missing ────────────────────────────────
-        if (!studentRow) {
-            console.warn(
-                '[student/credentials] No student row found for userId:',
-                authCheck.userId,
-                '— attempting auto-create',
-            );
-
-            const serviceClient = hasServiceRoleEnv() ? getServiceRoleClient() : null;
-            if (serviceClient) {
-                const { data: authUser } = await serviceClient.auth.admin.getUserById(
-                    authCheck.userId,
-                );
-                const userEmail = authUser?.user?.email ?? '';
-                const userName =
-                    authUser?.user?.user_metadata?.name ?? userEmail.split('@')[0] ?? 'Student';
-
-                if (userEmail) {
-                    const { data: newStudent, error: createError } = await serviceClient
-                        .from('students')
-                        .upsert(
-                            { auth_user_id: authCheck.userId, name: userName, email: userEmail },
-                            { onConflict: 'email', ignoreDuplicates: false },
-                        )
-                        .select('id, wallet_address')
-                        .maybeSingle();
-
-                    if (!createError && newStudent) {
-                        studentRow = newStudent;
-                        // eslint-disable-next-line no-console
-                        console.log(
-                            '[student/credentials] Auto-created student row:',
-                            newStudent.id,
-                        );
-                    } else {
-                        const { data: byEmail } = await serviceClient
-                            .from('students')
-                            .select('id, wallet_address')
-                            .eq('email', userEmail)
-                            .maybeSingle();
-                        if (byEmail) studentRow = byEmail;
-                    }
-                }
-            }
-        }
-
         if (!studentRow?.id) {
             return NextResponse.json({ success: true, credentials: [], total: 0, page, pageSize, totalPages: 0 });
         }
