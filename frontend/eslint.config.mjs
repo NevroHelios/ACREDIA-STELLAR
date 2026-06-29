@@ -13,6 +13,9 @@ export default tseslint.config(
       ...nextPlugin.configs.recommended.rules,
       ...nextPlugin.configs['core-web-vitals'].rules,
       "@typescript-eslint/no-explicit-any": "error",
+      // TODO: Restrict all raw console calls to prevent direct bypass of debug/structured logger.
+      // Configure "no-console": ["error", { allow: [] }] (allow: [] bans warn/error as well).
+      // A file override should be defined to allow console.* calls ONLY inside src/lib/debug.ts.
       "no-console": ["error", { allow: ["warn", "error"] }]
     },
   },
