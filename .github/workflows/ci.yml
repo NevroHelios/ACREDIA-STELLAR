@@ -125,11 +125,11 @@ jobs:
       - name: Check Formatting
         run: cargo fmt -- --check
 
+      - name: Compile to optimized WASM
+        run: cargo build --target wasm32v1-none --release
+
       - name: Run Contract Tests
         run: cargo test --lib
 
       - name: Run Clippy Linter
         run: cargo clippy --target wasm32v1-none
-
-      - name: Compile to optimized WASM
-        run: cargo build --target wasm32v1-none --release

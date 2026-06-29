@@ -2,7 +2,7 @@
 
 import { RouteStateScreen } from '@/components/route-state/RouteStateScreen';
 
-export default function GlobalError({ error: _error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function GlobalError(props: { error: Error & { digest?: string }; reset: () => void }) {
     return (
         <html lang="en">
             <body>
@@ -11,7 +11,7 @@ export default function GlobalError({ error: _error, reset }: { error: Error & {
                     description="The app encountered a problem. Please refresh the page or try again in a moment."
                     actionLabel="Try again"
                     secondaryActionLabel="Back to home"
-                    onAction={reset}
+                    onAction={props.reset}
                     variant="error"
                 />
             </body>

@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
             .eq('auth_user_id', authCheck.userId)
             .maybeSingle();
 
-        let studentRow = initialStudentRow;
+        const studentRow = initialStudentRow;
 
         if (studentError) {
             console.error('[student/credentials] Error fetching student row:', studentError);
