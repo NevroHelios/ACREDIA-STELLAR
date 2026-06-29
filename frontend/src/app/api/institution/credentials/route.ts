@@ -4,10 +4,12 @@ import {
     hasServiceRoleEnv,
     requireAuthenticatedRequest,
 } from '@/lib/serverAuth';
+import { structuredLog, captureException } from '@/lib/debug';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+    const requestId = request.headers.get('x-request-id') || 'unknown';
     try {
         const authCheck = await requireAuthenticatedRequest(request);
         if (!authCheck.ok) {
@@ -29,7 +31,7 @@ export async function GET(request: NextRequest) {
             .maybeSingle();
 
         if (instError) {
-            console.error('[institution/credentials] Error fetching institution row:', instError);
+            structuredLog('ERROR', 'Error fetching institution row', requestId, { error: instError });
             return NextResponse.json(
                 { success: false, error: 'Failed to load institution profile' },
                 { status: 500 }
@@ -90,7 +92,7 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (err) {
-        console.error('[institution/credentials] Unhandled error:', err);
+        captureException(err, { requestId, context: 'GET /api/institution/credentials' });
         return NextResponse.json(
             { success: false, error: 'Failed to fetch institution credentials' },
             { status: 500 }

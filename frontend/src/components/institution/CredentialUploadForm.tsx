@@ -20,6 +20,7 @@ import {
 import { isValidAddress } from '@/lib/contracts';
 import { validateCredentialDraft } from '@/lib/credentialValidation';
 import { toast } from 'sonner';
+import { captureException } from '@/lib/debug';
 import { CredentialUploadFormSections } from '@/components/institution/credential-upload/CredentialUploadFormSections';
 
 interface Subject {
@@ -260,7 +261,7 @@ export function CredentialUploadForm({
                 onSuccess();
             }
         } catch (error: unknown) {
-            console.error('Error issuing credential:', error);
+            captureException(error, { context: 'handleConfirmIssue' });
             toast.error((error instanceof Error ? error.message : String(error)) || 'Failed to issue credential', {
                 id: 'issue-credential',
             });

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { pinJsonToPinata, validatePinataJson } from '@/lib/ipfsServer';
 import { enforceRateLimit } from '@/lib/rateLimit';
+import { captureException } from '@/lib/debug';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,7 @@ const IPFS_JSON_RATE_LIMIT = {
 } as const;
 
 export async function POST(request: Request) {
+    const requestId = request.headers.get('x-request-id') || 'unknown';
     try {
         const rateLimitResponse = enforceRateLimit(request, IPFS_JSON_RATE_LIMIT);
         if (rateLimitResponse) {
@@ -29,7 +31,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ success: true, cid });
     } catch (error: unknown) {
-        console.error('[api/ipfs/json] Failed to pin JSON:', error);
+        captureException(error, { requestId, context: 'POST /api/ipfs/json' });
         return NextResponse.json(
             { success: false, error: 'Failed to upload JSON to IPFS.' },
             { status: 500 },

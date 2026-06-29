@@ -6,9 +6,11 @@ import { runtimeConfig } from './runtimeConfig';
 const supabaseUrl = runtimeConfig.supabase.url;
 const supabaseAnonKey = runtimeConfig.supabase.anonKey;
 
+import { debugWarn } from './debug';
+
 if (!supabaseUrl || !supabaseAnonKey) {
     if (!runtimeConfig.isProduction) {
-        console.warn('⚠️ Missing Supabase environment variables');
+        debugWarn('⚠️ Missing Supabase environment variables');
     }
 }
 

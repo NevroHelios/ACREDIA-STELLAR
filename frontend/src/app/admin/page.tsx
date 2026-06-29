@@ -10,7 +10,7 @@ import { ConnectWallet } from '@/components/ui/ConnectWallet';
 import { Card } from '@/components/ui/card';
 import { RouteStateScreen } from '@/components/route-state/RouteStateScreen';
 import { getContractOwner } from '@/lib/contracts';
-import { debugLog, debugWarn } from '@/lib/debug';
+import { debugLog, debugWarn, captureException } from '@/lib/debug';
 import { runtimeConfig } from '@/lib/runtimeConfig';
 import { safeGetSession } from '@/lib/supabase';
 import { useStellarAccount } from '@/contexts/StellarContext';
@@ -89,7 +89,7 @@ function AdminDashboardContent() {
                     toast.success('Verified as Contract Owner');
                 }
             } catch (error) {
-                console.error('Error checking ownership:', error);
+                captureException(error, { context: 'checkOwnership' });
                 toast.error('Failed to verify ownership: ' + (error as Error).message);
             } finally {
                 setIsChecking(false);
@@ -126,10 +126,10 @@ function AdminDashboardContent() {
                     return;
                 }
 
-                console.error('Failed to fetch stats:', data.error);
+                captureException(new Error(data.error || 'Failed to fetch stats'), { context: 'fetchStats' });
                 toast.error('Failed to load statistics');
             } catch (error) {
-                console.error('Error fetching stats:', error);
+                captureException(error, { context: 'fetchStats' });
                 toast.error('Failed to load statistics');
             } finally {
                 setLoadingStats(false);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient, requireAdminRequest } from '@/lib/serverAuth';
 import { enforceRateLimit } from '@/lib/rateLimit';
 import { VERIFICATION_RESULT_TYPES } from '@/lib/verificationAudit';
+import { structuredLog, captureException } from '@/lib/debug';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,7 @@ const ADMIN_STATS_RATE_LIMIT = {
 } as const;
 
 export async function GET(request: NextRequest) {
+    const requestId = request.headers.get('x-request-id') || 'unknown';
     try {
         const rateLimitResponse = enforceRateLimit(request, ADMIN_STATS_RATE_LIMIT);
         if (rateLimitResponse) {
@@ -34,7 +36,7 @@ export async function GET(request: NextRequest) {
             .select('*', { count: 'exact', head: true });
 
         if (institutionsError) {
-            console.error('Error fetching institutions:', institutionsError);
+            structuredLog('ERROR', 'Error fetching institutions', requestId, { error: institutionsError });
         }
 
         // Fetch authorized institutions (those with wallet_address or verified status)
@@ -49,7 +51,7 @@ export async function GET(request: NextRequest) {
             .not('wallet_address', 'is', null);
 
         if (walletError) {
-            console.error('Error fetching institutions with wallet:', walletError);
+            structuredLog('ERROR', 'Error fetching institutions with wallet', requestId, { error: walletError });
         }
 
         // Second, get institutions that have issued credentials
@@ -58,7 +60,7 @@ export async function GET(request: NextRequest) {
             .select('institution_id');
 
         if (credsError) {
-            console.error('Error fetching institutions with credentials:', credsError);
+            structuredLog('ERROR', 'Error fetching institutions with credentials', requestId, { error: credsError });
         }
 
         // Combine and deduplicate
@@ -75,7 +77,7 @@ export async function GET(request: NextRequest) {
             .select('*', { count: 'exact', head: true });
 
         if (credentialsError) {
-            console.error('Error fetching credentials:', credentialsError);
+            structuredLog('ERROR', 'Error fetching credentials', requestId, { error: credentialsError });
         }
 
         // Fetch active (non-revoked) credentials
@@ -85,7 +87,7 @@ export async function GET(request: NextRequest) {
             .eq('revoked', false);
 
         if (activeError) {
-            console.error('Error fetching active credentials:', activeError);
+            structuredLog('ERROR', 'Error fetching active credentials', requestId, { error: activeError });
         }
 
         // Fetch total students
@@ -94,7 +96,7 @@ export async function GET(request: NextRequest) {
             .select('*', { count: 'exact', head: true });
 
         if (studentsError) {
-            console.error('Error fetching students:', studentsError);
+            structuredLog('ERROR', 'Error fetching students', requestId, { error: studentsError });
         }
 
         // Fetch aggregate public verification activity. This route is admin-only,
@@ -105,7 +107,7 @@ export async function GET(request: NextRequest) {
                 .select('*', { count: 'exact', head: true });
 
         if (verificationTotalError) {
-            console.error('Error fetching verification log count:', verificationTotalError);
+            structuredLog('ERROR', 'Error fetching verification log count', requestId, { error: verificationTotalError });
         }
 
         const verificationSince = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -116,7 +118,7 @@ export async function GET(request: NextRequest) {
                 .gte('created_at', verificationSince);
 
         if (verificationRecentError) {
-            console.error('Error fetching recent verification log count:', verificationRecentError);
+            structuredLog('ERROR', 'Error fetching recent verification log count', requestId, { error: verificationRecentError });
         }
 
         const verificationResultEntries = await Promise.all(
@@ -127,7 +129,7 @@ export async function GET(request: NextRequest) {
                     .eq('verification_result->>result_type', resultType);
 
                 if (error) {
-                    console.error(`Error fetching ${resultType} verification count:`, error);
+                    structuredLog('ERROR', `Error fetching ${resultType} verification count`, requestId, { error });
                 }
 
                 return [resultType, count || 0] as const;
@@ -155,7 +157,7 @@ export async function GET(request: NextRequest) {
             },
         });
     } catch (error) {
-        console.error('Error fetching admin stats:', error);
+        captureException(error, { requestId, context: 'GET /api/admin/stats' });
         return NextResponse.json(
             {
                 success: false,

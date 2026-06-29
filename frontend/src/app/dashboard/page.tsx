@@ -12,7 +12,7 @@ import StudentCredentialsList from '@/components/student/StudentCredentialsList'
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { debugLog, debugWarn } from '@/lib/debug';
+import { debugLog, debugWarn, captureException } from '@/lib/debug';
 import { safeGetSession, supabase } from '@/lib/supabase';
 import { useStellarAccount } from '@/contexts/StellarContext';
 import { ProtectedRoute, useAuth } from '@/contexts/AuthContext';
@@ -45,7 +45,7 @@ function DashboardContent() {
                     .maybeSingle();
 
                 if (error) {
-                    console.error('Error fetching institution:', error);
+                    captureException(error, { context: 'fetchInstitutionId' });
                     toast.error('Failed to load institution data');
                     return;
                 }
@@ -73,7 +73,7 @@ function DashboardContent() {
                     .single();
 
                 if (createError) {
-                    console.error('Error creating institution:', createError);
+                    captureException(createError, { context: 'createInstitution' });
                     toast.error('Failed to create institution profile');
                     return;
                 }
@@ -84,7 +84,7 @@ function DashboardContent() {
                     toast.success('Institution profile created');
                 }
             } catch (error) {
-                console.error('Error loading institution:', error);
+                captureException(error, { context: 'fetchInstitutionId_catch' });
                 toast.error('An unexpected error occurred');
             } finally {
                 setLoadingInstitution(false);
@@ -144,7 +144,7 @@ function DashboardContent() {
                     toast.success('Institution wallet linked');
                 }
             } catch (error) {
-                console.error('Error linking institution wallet:', error);
+                captureException(error, { context: 'linkConnectedWallet' });
                 toast.error('Failed to link connected wallet to your institution');
             } finally {
                 // Always clear the in-flight guard so a failed or interrupted
@@ -302,20 +302,21 @@ function DashboardContent() {
                             </div>
                         </div>
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <Link href="/admin">
-                                <div className="group cursor-pointer rounded-xl border border-red-200 bg-white p-6 transition-all hover:border-red-400 hover:shadow-md">
-                                    <Shield className="mb-3 h-11 w-11 text-red-600 transition-transform group-hover:scale-110" />
-                                    <h3 className="mb-1 font-bold text-gray-900">
-                                        Admin Dashboard
-                                    </h3>
-                                    <p className="text-sm text-gray-600">
-                                        Authorize institutions, view system stats, and manage the
-                                        contract.
-                                    </p>
-                                    <span className="mt-2 inline-block text-xs font-semibold text-red-600">
-                                        Open Admin Panel -&gt;
-                                    </span>
-                                </div>
+                            <Link
+                                href="/admin"
+                                className="group block rounded-xl border border-red-200 bg-white p-6 transition-all hover:border-red-400 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+                            >
+                                <Shield className="mb-3 h-11 w-11 text-red-600 transition-transform group-hover:scale-110" />
+                                <h3 className="mb-1 font-bold text-gray-900">
+                                    Admin Dashboard
+                                </h3>
+                                <p className="text-sm text-gray-600">
+                                    Authorize institutions, view system stats, and manage the
+                                    contract.
+                                </p>
+                                <span className="mt-2 inline-block text-xs font-semibold text-red-600">
+                                    Open Admin Panel -&gt;
+                                </span>
                             </Link>
                             <div className="rounded-xl border border-gray-200 bg-white p-6">
                                 <User className="mb-3 h-11 w-11 text-teal-600" />

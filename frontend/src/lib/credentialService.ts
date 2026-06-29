@@ -6,7 +6,7 @@ import {
     revokeCredentialOnStellar,
 } from './contracts';
 import { CREDENTIAL_HASH_ALGORITHM, CREDENTIAL_METADATA_SCHEMA_VERSION } from './credentialHash';
-import { debugLog } from './debug';
+import { debugLog, captureException } from './debug';
 
 export interface Subject {
     id: string;
@@ -188,7 +188,7 @@ export async function issueCredential(
         });
 
         if (dbError) {
-            console.error('Database save error:', dbError);
+            captureException(dbError, { context: 'db_save_credential' });
             const details = [dbError.code, dbError.message, dbError.details]
                 .filter(Boolean)
                 .join(' | ');
@@ -206,7 +206,7 @@ export async function issueCredential(
             metadataHash: metadataPath,
         };
     } catch (error) {
-        console.error('Error issuing credential:', error);
+        captureException(error, { context: 'issueCredential_service' });
         throw error;
     }
 }
@@ -223,7 +223,7 @@ export async function getInstitutionCredentials(institutionId: string) {
 
         return data;
     } catch (error) {
-        console.error('Error fetching institution credentials:', error);
+        captureException(error, { context: 'getInstitutionCredentials_service' });
         throw error;
     }
 }
@@ -240,7 +240,7 @@ export async function getCredentialById(credentialId: string) {
 
         return data;
     } catch (error) {
-        console.error('Error fetching credential:', error);
+        captureException(error, { context: 'getCredentialById_service' });
         throw error;
     }
 }
@@ -293,7 +293,7 @@ export async function revokeCredentialById(
 
         debugLog('Credential revocation saved to the database.');
     } catch (error) {
-        console.error('Error revoking credential:', error);
+        captureException(error, { context: 'revokeCredentialById_service' });
         throw error;
     }
 }

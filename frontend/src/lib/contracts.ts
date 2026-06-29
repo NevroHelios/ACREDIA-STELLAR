@@ -11,7 +11,7 @@ import {
     xdr,
 } from '@stellar/stellar-sdk';
 import { activeNetwork, getContractAddress, sorobanServer } from './stellar';
-import { debugLog, debugWarn } from './debug';
+import { debugLog, debugWarn, captureException } from './debug';
 import { generateCanonicalCredentialHash } from './credentialHash';
 import { credentialHashHexToScVal } from './credentialHashEncoding';
 
@@ -171,7 +171,7 @@ function decodeTransactionReturnValue(confirmation: unknown): unknown | null {
 
         return scValToNative(returnValue as xdr.ScVal);
     } catch (error) {
-        console.error('Failed to decode Soroban return value:', error);
+        captureException(error, { context: 'decodeReturnValue' });
         return null;
     }
 }
@@ -216,7 +216,7 @@ export function getSorobanTransactionResult(simResult: unknown): unknown {
 
         return rawResult;
     } catch (e) {
-        console.error('DEBUG getSorobanTransactionResult error:', e);
+        captureException(e, { context: 'getSorobanTransactionResult' });
         return null;
     }
 }

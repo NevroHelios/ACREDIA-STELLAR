@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { getClientIp } from './rateLimit';
 import { serverRuntimeConfig } from './runtimeConfig';
+import { debugWarn } from './debug';
 
 export const VERIFICATION_RESULT_TYPES = [
     'verified',
@@ -77,11 +78,11 @@ export async function writeVerificationAuditLog(
         });
 
         if (error && process.env.NODE_ENV !== 'test') {
-            console.warn('Failed to write verification audit log:', error);
+            debugWarn('Failed to write verification audit log:', error);
         }
     } catch (error) {
         if (process.env.NODE_ENV !== 'test') {
-            console.warn('Failed to write verification audit log:', error);
+            debugWarn('Failed to write verification audit log:', error);
         }
     }
 }

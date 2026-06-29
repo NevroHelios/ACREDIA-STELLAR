@@ -4,6 +4,7 @@ import {
     requireAuthenticatedRequest,
 } from '@/lib/serverAuth';
 import { enforceRateLimit } from '@/lib/rateLimit';
+import { structuredLog, captureException } from '@/lib/debug';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,7 @@ const STUDENT_PROVISION_RATE_LIMIT = {
 } as const;
 
 export async function POST(request: NextRequest) {
+    const requestId = request.headers.get('x-request-id') || 'unknown';
     try {
         const rateLimitResponse = enforceRateLimit(request, STUDENT_PROVISION_RATE_LIMIT);
         if (rateLimitResponse) {
@@ -34,7 +36,7 @@ export async function POST(request: NextRequest) {
         );
 
         if (authError || !authUser?.user) {
-            console.error('[student/provision] Error fetching auth user:', authError);
+            structuredLog('ERROR', 'Error fetching auth user', requestId, { error: authError });
             return NextResponse.json(
                 { success: false, error: 'Failed to retrieve auth user details' },
                 { status: 400 },
@@ -66,7 +68,7 @@ export async function POST(request: NextRequest) {
             .maybeSingle();
 
         if (fetchAuthError) {
-            console.error('[student/provision] Error fetching student by auth_user_id:', fetchAuthError);
+            structuredLog('ERROR', 'Error fetching student by auth_user_id', requestId, { error: fetchAuthError });
             return NextResponse.json(
                 { success: false, error: 'Database error' },
                 { status: 500 },
@@ -85,7 +87,7 @@ export async function POST(request: NextRequest) {
             .maybeSingle();
 
         if (fetchEmailError) {
-            console.error('[student/provision] Error fetching student by email:', fetchEmailError);
+            structuredLog('ERROR', 'Error fetching student by email', requestId, { error: fetchEmailError });
             return NextResponse.json(
                 { success: false, error: 'Database error' },
                 { status: 500 },
@@ -110,7 +112,7 @@ export async function POST(request: NextRequest) {
                 .maybeSingle();
 
             if (updateError || !updatedStudent) {
-                console.error('[student/provision] Error linking student profile:', updateError);
+                structuredLog('ERROR', 'Error linking student profile', requestId, { error: updateError });
                 return NextResponse.json(
                     { success: false, error: 'Failed to link student profile' },
                     { status: 500 },
@@ -133,7 +135,7 @@ export async function POST(request: NextRequest) {
             .maybeSingle();
 
         if (createError || !newStudent) {
-            console.error('[student/provision] Error creating student profile:', createError);
+            structuredLog('ERROR', 'Error creating student profile', requestId, { error: createError });
             return NextResponse.json(
                 { success: false, error: 'Failed to create student profile' },
                 { status: 500 },
@@ -141,9 +143,8 @@ export async function POST(request: NextRequest) {
         }
 
         return NextResponse.json({ success: true, student: newStudent });
-
     } catch (err) {
-        console.error('[student/provision] Unhandled error:', err);
+        captureException(err, { requestId, context: 'POST /api/student/provision' });
         return NextResponse.json(
             { success: false, error: 'Failed to provision student profile' },
             { status: 500 },

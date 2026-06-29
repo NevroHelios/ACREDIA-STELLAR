@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { authorizeIssuer, getContractOwner, isAuthorizedIssuer } from '@/lib/contracts';
-import { debugLog, debugWarn } from '@/lib/debug';
+import { debugLog, debugWarn, captureException } from '@/lib/debug';
 import { safeGetSession } from '@/lib/supabase';
 import { useStellarAccount } from '@/contexts/StellarContext';
 
@@ -28,7 +28,7 @@ export function AuthorizeIssuer() {
                 const owner = await getContractOwner(address);
                 setContractOwner(owner);
             } catch (error) {
-                console.error('Error loading contract owner:', error);
+                captureException(error, { context: 'loadOwner' });
             }
         };
 
@@ -62,7 +62,7 @@ export function AuthorizeIssuer() {
                 toast.success('Wallet is authorized');
             }
         } catch (error) {
-            console.error('Error checking authorization:', error);
+            captureException(error, { context: 'checkAuthorization' });
             toast.error('Failed to check authorization');
         } finally {
             setIsChecking(false);
@@ -139,7 +139,7 @@ export function AuthorizeIssuer() {
 
             await checkAuthorization(walletToAuthorize);
         } catch (error: unknown) {
-            console.error('Error authorizing wallet:', error);
+            captureException(error, { context: 'handleAuthorizeWallet' });
             let msg = (error instanceof Error ? error.message : String(error)) || 'Failed to authorize wallet';
             if (msg.includes('canceled') || msg.includes('User')) {
                 msg = 'Authorization transaction was canceled.';

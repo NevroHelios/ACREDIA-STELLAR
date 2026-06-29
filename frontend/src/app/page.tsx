@@ -636,62 +636,56 @@ export default function Home() {
                             <div className="flex items-center gap-8">
                                 <div className="min-w-[200px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse3.mm.bing.net/th/id/OIP.7bACtsXUKPDhBOuidawTTwHaGr?pid=Api&P=0&h=180"
+                                        src="/logos/mit.svg"
                                         alt="MIT"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[200px] flex items-center justify-center">
                                     <Image
-                                        src="https://www.scholarshipregion.com/wp-content/uploads/2022/09/University-of-Oxford-UK.jpg"
+                                        src="/logos/oxford.svg"
                                         alt="Oxford"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[200px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse1.mm.bing.net/th/id/OIP.xHMtPAL900IBFxWZBfM6gAHaEp?pid=Api&P=0&h=180"
+                                        src="/logos/stanford.svg"
                                         alt="Stanford"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[200px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse4.mm.bing.net/th/id/OIP.7YBhBgFBg-bpAgV5kpJ0AwHaEL?pid=Api&P=0&h=180"
+                                        src="/logos/harvard.svg"
                                         alt="Harvard"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[200px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse3.mm.bing.net/th/id/OIP.cJonBR8WAhleDoeIvPHtDQHaEK?pid=Api&P=0&h=180"
+                                        src="/logos/cambridge.svg"
                                         alt="Cambridge"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[200px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse3.mm.bing.net/th/id/OIP.6_BcDwnHtQHpmB0zsZW6JwHaDe?pid=Api&P=0&h=180"
+                                        src="/logos/iit.svg"
                                         alt="IIT"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                             </div>
@@ -700,62 +694,56 @@ export default function Home() {
                             <div className="flex items-center gap-8">
                                 <div className="min-w-[200px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse3.mm.bing.net/th/id/OIP.7bACtsXUKPDhBOuidawTTwHaGr?pid=Api&P=0&h=180"
+                                        src="/logos/mit.svg"
                                         alt="MIT"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[200px] flex items-center justify-center">
                                     <Image
-                                        src="https://www.scholarshipregion.com/wp-content/uploads/2022/09/University-of-Oxford-UK.jpg"
+                                        src="/logos/oxford.svg"
                                         alt="Oxford"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[200px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse1.mm.bing.net/th/id/OIP.xHMtPAL900IBFxWZBfM6gAHaEp?pid=Api&P=0&h=180"
+                                        src="/logos/stanford.svg"
                                         alt="Stanford"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[200px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse4.mm.bing.net/th/id/OIP.7YBhBgFBg-bpAgV5kpJ0AwHaEL?pid=Api&P=0&h=180"
+                                        src="/logos/harvard.svg"
                                         alt="Harvard"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[200px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse3.mm.bing.net/th/id/OIP.cJonBR8WAhleDoeIvPHtDQHaEK?pid=Api&P=0&h=180"
+                                        src="/logos/cambridge.svg"
                                         alt="Cambridge"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[200px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse3.mm.bing.net/th/id/OIP.6_BcDwnHtQHpmB0zsZW6JwHaDe?pid=Api&P=0&h=180"
+                                        src="/logos/iit.svg"
                                         alt="IIT"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                             </div>

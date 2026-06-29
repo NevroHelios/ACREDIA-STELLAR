@@ -58,7 +58,9 @@ interface Credential {
     revoked: boolean;
 }
 
-const PAGE_SIZE = 20;
+import { captureException } from '@/lib/debug';
+
+const PAGE_SIZE = 10;
 
 export function IssuedCredentialsList({ refreshTrigger }: IssuedCredentialsListProps) {
     const router     = useRouter();
@@ -125,7 +127,7 @@ const res = await fetch(`/api/institution/credentials?${params}`, {
             setTotal(json.total ?? 0);
             setTotalPages(json.totalPages ?? 0);
         } catch (err: unknown) {
-            console.error('Error loading credentials:', err);
+            captureException(err, { context: 'loadCredentials' });
             setError((err instanceof Error ? err.message : String(err)) || 'Failed to load credentials');
         } finally {
             setIsLoading(false);
@@ -153,7 +155,7 @@ const res = await fetch(`/api/institution/credentials?${params}`, {
             setCredentialToRevoke(null);
             await loadCredentials(); // Refresh list
         } catch (err: unknown) {
-            console.error('Error revoking credential:', err);
+            captureException(err, { context: 'handleRevokeConfirm' });
 
             // Show user-friendly error messages
             let errorMessage = 'Failed to revoke credential';

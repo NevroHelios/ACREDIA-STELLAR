@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Check, Copy, Download, Share2 } from 'lucide-react';
-import { debugLog } from '@/lib/debug';
+import { debugLog, debugWarn, captureException } from '@/lib/debug';
 
 interface QRCodeModalProps {
     open: boolean;
@@ -44,7 +44,7 @@ export default function QRCodeModal({ open, onClose, credential }: QRCodeModalPr
 
         const timer = setTimeout(() => {
             if (!canvasRef.current) {
-                console.error('QR canvas is not ready.');
+                debugWarn('QR canvas is not ready.');
                 return;
             }
 
@@ -71,7 +71,7 @@ export default function QRCodeModal({ open, onClose, credential }: QRCodeModalPr
                 },
                 (error) => {
                     if (error) {
-                        console.error('Error generating QR code:', error);
+                        captureException(error, { context: 'toCanvas_QR' });
                         return;
                     }
 
@@ -106,7 +106,7 @@ export default function QRCodeModal({ open, onClose, credential }: QRCodeModalPr
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         } catch (error) {
-            console.error('Failed to copy verification link:', error);
+            captureException(error, { context: 'handleCopyLink' });
         }
     };
 
@@ -163,11 +163,12 @@ export default function QRCodeModal({ open, onClose, credential }: QRCodeModalPr
                     </div>
 
                     <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-gray-700">
+                        <label htmlFor="verification-link-input" className="text-xs font-medium text-gray-700">
                             Verification Link
                         </label>
                         <div className="flex min-w-0 gap-2">
                             <Input
+                                id="verification-link-input"
                                 value={verificationUrl}
                                 readOnly
                                 className="h-9 min-w-0 truncate bg-white font-mono text-xs"

@@ -1,4 +1,4 @@
-import { debugLog } from './debug';
+import { debugLog, captureException } from './debug';
 import { runtimeConfig } from './runtimeConfig';
 
 const PINATA_GATEWAY = runtimeConfig.ipfs.gatewayUrl;
@@ -25,7 +25,7 @@ export async function uploadToIPFS(file: File): Promise<string> {
         debugLog('File uploaded to IPFS via server IPFS route.');
         return cid;
     } catch (error: unknown) {
-        console.error('Error uploading file to IPFS:', error);
+        captureException(error, { context: 'uploadToIPFS' });
         const message = error instanceof Error ? error.message : String(error);
         throw new Error(`Failed to upload to IPFS: ${message}`, { cause: error });
     }
@@ -50,7 +50,7 @@ export async function uploadJSONToIPFS(data: unknown): Promise<string> {
         debugLog('JSON uploaded to IPFS via server IPFS route.');
         return cid;
     } catch (error: unknown) {
-        console.error('Error uploading JSON to IPFS:', error);
+        captureException(error, { context: 'uploadJSONToIPFS' });
         const message = error instanceof Error ? error.message : String(error);
         throw new Error(`Failed to upload JSON to IPFS: ${message}`, { cause: error });
     }
@@ -82,7 +82,7 @@ export async function fetchFromIPFS(cid: string): Promise<unknown> {
 
         return await response.json();
     } catch (error: unknown) {
-        console.error('Error fetching from IPFS:', error);
+        captureException(error, { context: 'fetchFromIPFS' });
         const message = error instanceof Error ? error.message : String(error);
         throw new Error(`Failed to fetch from IPFS: ${message}`, { cause: error });
     }
