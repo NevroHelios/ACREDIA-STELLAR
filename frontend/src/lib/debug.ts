@@ -11,6 +11,8 @@ import { getRuntimeConfig } from './runtimeConfig';
  *    - Implement a middleware or api wrapper that generates a unique `x-request-id` header for each incoming HTTP request.
  *    - Export a `structuredLog` function that formats output as JSON containing:
  *      { timestamp, level, requestId, message, context }
+ *    - Centralize all logging: route all direct console.* calls through the debug/structured logger, gated by env.
+ *    - Ensure server and client logs never echo raw secrets, private keys, JWTs, or full auth tokens.
  * 
  * 3. Self-host / Opt-out Documentation:
  *    - Support env-var `NEXT_PUBLIC_DISABLE_TELEMETRY=true` or `SENTRY_DSN=""` to completely opt-out or redirect to a self-hosted instance.
