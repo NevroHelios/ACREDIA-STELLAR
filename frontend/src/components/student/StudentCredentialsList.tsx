@@ -112,6 +112,20 @@ export default function StudentCredentialsList({
                 return;
             }
 
+            // Securely provision/link the student profile first
+            const provisionRes = await fetch('/api/student/provision', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${accessToken}` },
+            });
+
+            if (!provisionRes.ok) {
+                const provisionData = await provisionRes.json().catch(() => ({}));
+                const errMessage = provisionData?.error || 'Failed to initialize student profile';
+                setError(errMessage);
+                setLoading(false);
+                return;
+            }
+
             const params = new URLSearchParams({
                 page: page.toString(),
                 pageSize: PAGE_SIZE.toString(),

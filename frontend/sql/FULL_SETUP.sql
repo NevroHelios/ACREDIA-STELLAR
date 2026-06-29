@@ -162,9 +162,7 @@ BEGIN
       COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
       new.email
     )
-    ON CONFLICT (email) DO UPDATE
-      SET auth_user_id = EXCLUDED.auth_user_id
-      WHERE public.institutions.auth_user_id IS NULL;
+    ON CONFLICT (email) DO NOTHING;
   END IF;
   RETURN new;
 END;
@@ -181,9 +179,7 @@ BEGIN
       COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
       new.email
     )
-    ON CONFLICT (email) DO UPDATE
-      SET auth_user_id = EXCLUDED.auth_user_id
-      WHERE public.students.auth_user_id IS NULL;
+    ON CONFLICT (email) DO NOTHING;
   END IF;
   RETURN new;
 END;
