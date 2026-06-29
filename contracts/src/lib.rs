@@ -1008,12 +1008,14 @@ mod tests {
     fn test_upgrade_owner_gated() {
         let (env, contract, owner, _, _) = setup();
         let client = AcrediaCredentialClient::new(&env, &contract);
-        
+
         let wasm_bytes = include_bytes!("../target/wasm32v1-none/release/acredia_stellar.wasm");
-        let new_wasm_hash = env.deployer().upload_contract_wasm(soroban_sdk::Bytes::from_slice(&env, wasm_bytes));
+        let new_wasm_hash = env
+            .deployer()
+            .upload_contract_wasm(soroban_sdk::Bytes::from_slice(&env, wasm_bytes));
 
         client.upgrade(&new_wasm_hash);
-        
+
         let auths = env.auths();
         assert_eq!(auths.len(), 1);
         let (auth_addr, invocation) = &auths[0];
@@ -1061,7 +1063,7 @@ mod tests {
         assert_eq!(client.get_storage_version(), 1);
         client.migrate();
         assert_eq!(client.get_storage_version(), 2);
-        
+
         client.migrate();
         assert_eq!(client.get_storage_version(), 2);
     }

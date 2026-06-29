@@ -117,7 +117,7 @@ describe('Student Identity & Provisioning Security Tests', () => {
             if (table === 'students') {
                 return {
                     select: vi.fn(() => ({
-                        eq: vi.fn((column: string, value: string) => ({
+                        eq: vi.fn((column: string) => ({
                             maybeSingle: column === 'auth_user_id' ? mockMaybeSingleByAuth : mockMaybeSingleByEmail
                         }))
                     }))
@@ -193,7 +193,7 @@ describe('Student Identity & Provisioning Security Tests', () => {
             if (table === 'students') {
                 return {
                     select: vi.fn(() => ({
-                        eq: vi.fn((column: string, value: string) => ({
+                        eq: vi.fn((column: string) => ({
                             maybeSingle: column === 'auth_user_id' ? mockMaybeSingleByAuth : mockMaybeSingleByEmail
                         }))
                     })),
@@ -261,7 +261,7 @@ describe('Student Identity & Provisioning Security Tests', () => {
             if (table === 'students') {
                 return {
                     select: vi.fn(() => ({
-                        eq: vi.fn((column: string, value: string) => ({
+                        eq: vi.fn((column: string) => ({
                             maybeSingle: column === 'auth_user_id' ? mockMaybeSingleByAuth : mockMaybeSingleByEmail
                         }))
                     })),
