@@ -45,13 +45,6 @@ const nextConfig: NextConfig = {
 
     images: {
         remotePatterns: [
-            // TODO: Remove the following third-party hostname entries once the external image references
-            // are replaced with self-hosted assets under public/ (e.g. in src/app/page.tsx and src/app/about/page.tsx).
-            // Keeping only Pinata and IPFS gateways is recommended for production.
-            { protocol: 'https', hostname: 'tse3.mm.bing.net' },
-            { protocol: 'https', hostname: 'tse1.mm.bing.net' },
-            { protocol: 'https', hostname: 'tse4.mm.bing.net' },
-            { protocol: 'https', hostname: 'www.scholarshipregion.com' },
             { protocol: 'https', hostname: 'gateway.pinata.cloud' },
             { protocol: 'https', hostname: '**.ipfs.dweb.link' },
         ],

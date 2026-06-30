@@ -274,62 +274,56 @@ export default function AboutPage() {
                             <div className="flex items-center gap-8">
                                 <div className="min-w-[160px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse3.mm.bing.net/th/id/OIP.7bACtsXUKPDhBOuidawTTwHaGr?pid=Api&P=0&h=180"
+                                        src="/logos/mit.svg"
                                         alt="MIT"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[160px] flex items-center justify-center">
                                     <Image
-                                        src="https://www.scholarshipregion.com/wp-content/uploads/2022/09/University-of-Oxford-UK.jpg"
+                                        src="/logos/oxford.svg"
                                         alt="Oxford"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[160px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse1.mm.bing.net/th/id/OIP.xHMtPAL900IBFxWZBfM6gAHaEp?pid=Api&P=0&h=180"
+                                        src="/logos/stanford.svg"
                                         alt="Stanford"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[160px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse4.mm.bing.net/th/id/OIP.7YBhBgFBg-bpAgV5kpJ0AwHaEL?pid=Api&P=0&h=180"
+                                        src="/logos/harvard.svg"
                                         alt="Harvard"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[160px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse3.mm.bing.net/th/id/OIP.cJonBR8WAhleDoeIvPHtDQHaEK?pid=Api&P=0&h=180"
+                                        src="/logos/cambridge.svg"
                                         alt="Cambridge"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[160px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse3.mm.bing.net/th/id/OIP.6_BcDwnHtQHpmB0zsZW6JwHaDe?pid=Api&P=0&h=180"
+                                        src="/logos/iit.svg"
                                         alt="IIT"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                             </div>
@@ -338,62 +332,56 @@ export default function AboutPage() {
                             <div className="flex items-center gap-8">
                                 <div className="min-w-[160px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse3.mm.bing.net/th/id/OIP.7bACtsXUKPDhBOuidawTTwHaGr?pid=Api&P=0&h=180"
+                                        src="/logos/mit.svg"
                                         alt="MIT"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[160px] flex items-center justify-center">
                                     <Image
-                                        src="https://www.scholarshipregion.com/wp-content/uploads/2022/09/University-of-Oxford-UK.jpg"
+                                        src="/logos/oxford.svg"
                                         alt="Oxford"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[160px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse1.mm.bing.net/th/id/OIP.xHMtPAL900IBFxWZBfM6gAHaEp?pid=Api&P=0&h=180"
+                                        src="/logos/stanford.svg"
                                         alt="Stanford"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[160px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse4.mm.bing.net/th/id/OIP.7YBhBgFBg-bpAgV5kpJ0AwHaEL?pid=Api&P=0&h=180"
+                                        src="/logos/harvard.svg"
                                         alt="Harvard"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[160px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse3.mm.bing.net/th/id/OIP.cJonBR8WAhleDoeIvPHtDQHaEK?pid=Api&P=0&h=180"
+                                        src="/logos/cambridge.svg"
                                         alt="Cambridge"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                                 <div className="min-w-[160px] flex items-center justify-center">
                                     <Image
-                                        src="https://tse3.mm.bing.net/th/id/OIP.6_BcDwnHtQHpmB0zsZW6JwHaDe?pid=Api&P=0&h=180"
+                                        src="/logos/iit.svg"
                                         alt="IIT"
                                         width={160}
                                         height={140}
                                         className="object-contain h-20"
-                                        unoptimized
                                     />
                                 </div>
                             </div>
@@ -839,7 +827,7 @@ export default function AboutPage() {
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 max-w-6xl mx-auto">
                         <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 p-4 flex items-center justify-center overflow-hidden">
                             <Image
-                                src="https://tse3.mm.bing.net/th/id/OIP.7bACtsXUKPDhBOuidawTTwHaGr?pid=Api&P=0&h=180"
+                                src="/logos/mit.svg"
                                 alt="MIT"
                                 width={160}
                                 height={140}
@@ -848,7 +836,7 @@ export default function AboutPage() {
                         </div>
                         <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 p-4 flex items-center justify-center overflow-hidden">
                             <Image
-                                src="https://www.scholarshipregion.com/wp-content/uploads/2022/09/University-of-Oxford-UK.jpg"
+                                src="/logos/oxford.svg"
                                 alt="Oxford University"
                                 width={160}
                                 height={140}
@@ -857,7 +845,7 @@ export default function AboutPage() {
                         </div>
                         <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 p-4 flex items-center justify-center overflow-hidden">
                             <Image
-                                src="https://tse1.mm.bing.net/th/id/OIP.xHMtPAL900IBFxWZBfM6gAHaEp?pid=Api&P=0&h=180"
+                                src="/logos/stanford.svg"
                                 alt="Stanford University"
                                 width={160}
                                 height={140}
@@ -866,7 +854,7 @@ export default function AboutPage() {
                         </div>
                         <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 p-4 flex items-center justify-center overflow-hidden">
                             <Image
-                                src="https://tse4.mm.bing.net/th/id/OIP.7YBhBgFBg-bpAgV5kpJ0AwHaEL?pid=Api&P=0&h=180"
+                                src="/logos/harvard.svg"
                                 alt="Harvard University"
                                 width={160}
                                 height={140}
@@ -875,7 +863,7 @@ export default function AboutPage() {
                         </div>
                         <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 p-4 flex items-center justify-center overflow-hidden">
                             <Image
-                                src="https://tse3.mm.bing.net/th/id/OIP.cJonBR8WAhleDoeIvPHtDQHaEK?pid=Api&P=0&h=180"
+                                src="/logos/cambridge.svg"
                                 alt="Cambridge University"
                                 width={160}
                                 height={140}
@@ -884,7 +872,7 @@ export default function AboutPage() {
                         </div>
                         <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 p-4 flex items-center justify-center overflow-hidden">
                             <Image
-                                src="https://tse3.mm.bing.net/th/id/OIP.6_BcDwnHtQHpmB0zsZW6JwHaDe?pid=Api&P=0&h=180"
+                                src="/logos/iit.svg"
                                 alt="IIT"
                                 width={160}
                                 height={140}

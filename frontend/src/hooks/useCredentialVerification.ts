@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { extractTokenFromQrPayload } from '@/lib/verification';
+import { debugWarn } from '@/lib/debug';
 
 export interface CredentialData {
     token_id: string;
@@ -63,12 +64,12 @@ export function useCredentialVerification(tokenId: string | null) {
         try {
             if (scanner.isScanning) await scanner.stop();
         } catch (err) {
-            console.warn('Unable to stop QR scanner:', err);
+            debugWarn('Unable to stop QR scanner:', err);
         }
         try {
             await scanner.clear();
         } catch (err) {
-            console.warn('Unable to clear QR scanner:', err);
+            debugWarn('Unable to clear QR scanner:', err);
         }
         scannerRef.current = null;
     }, []);

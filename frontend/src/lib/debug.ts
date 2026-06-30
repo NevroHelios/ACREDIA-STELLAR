@@ -1,36 +1,102 @@
 import { getRuntimeConfig } from './runtimeConfig';
 
-/*
- * TODO: Error Monitoring & Observability Implementation Plan
- * 
- * 1. SDK Integration:
- *    - Initialize Sentry (or equivalent) in `sentry.server.config.ts`, `sentry.client.config.ts`, and `sentry.edge.config.ts`.
- *    - Configure `beforeSend` callback to filter out sensitive credentials, authorization headers, or PII (e.g. user emails/addresses if requested).
- * 
- * 2. Structured API Logging & Request IDs:
- *    - Implement a middleware or api wrapper that generates a unique `x-request-id` header for each incoming HTTP request.
- *    - Export a `structuredLog` function that formats output as JSON containing:
- *      { timestamp, level, requestId, message, context }
- *    - Centralize all logging: route all direct console.* calls through the debug/structured logger, gated by env.
- *    - Ensure server and client logs never echo raw secrets, private keys, JWTs, or full auth tokens.
- * 
- * 3. Self-host / Opt-out Documentation:
- *    - Support env-var `NEXT_PUBLIC_DISABLE_TELEMETRY=true` or `SENTRY_DSN=""` to completely opt-out or redirect to a self-hosted instance.
+// Sensitive keys that must be scrubbed from logs/payloads
+const SENSITIVE_KEYS = [
+    'secret', 'password', 'token', 'authorization', 'private_key', 'key', 'seed', 'jwt', 'email', 'address'
+];
+
+/**
+ * Recursively scrubs sensitive keys and values from objects before logging
  */
+export function scrubSensitiveData(data: unknown): unknown {
+    if (!data) return data;
+    if (typeof data !== 'object') return data;
+    if (Array.isArray(data)) {
+        return data.map(scrubSensitiveData);
+    }
+    const cleanData: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+        if (SENSITIVE_KEYS.some(k => key.toLowerCase().includes(k))) {
+            cleanData[key] = '[SCRUBBED]';
+        } else if (typeof value === 'object') {
+            cleanData[key] = scrubSensitiveData(value);
+        } else if (typeof value === 'string' && (value.toLowerCase().startsWith('bearer ') || value.length > 80)) {
+            // Also scrub long strings that look like tokens, signatures, or keys
+            cleanData[key] = '[SCRUBBED]';
+        } else {
+            cleanData[key] = value;
+        }
+    }
+    return cleanData;
+}
 
 export function isDebugLoggingEnabled(): boolean {
-    return process.env.NODE_ENV !== 'production' && getRuntimeConfig().debug.enableLogs;
+    try {
+        const config = getRuntimeConfig();
+        return process.env.NODE_ENV !== 'production' && config.debug.enableLogs;
+    } catch {
+        return false;
+    }
 }
 
 export function debugLog(...args: unknown[]) {
     if (isDebugLoggingEnabled()) {
-        // eslint-disable-next-line no-console
-        console.log(...args);
+        const cleanArgs = args.map(scrubSensitiveData);
+        console.log(...cleanArgs);
     }
 }
 
 export function debugWarn(...args: unknown[]) {
     if (isDebugLoggingEnabled()) {
-        console.warn(...args);
+        const cleanArgs = args.map(scrubSensitiveData);
+        console.warn(...cleanArgs);
+    }
+}
+
+export function structuredLog(
+    level: 'INFO' | 'WARN' | 'ERROR',
+    message: string,
+    requestId: string,
+    context?: Record<string, unknown>
+) {
+    try {
+        const cleanContext = scrubSensitiveData(context);
+        const logPayload = {
+            timestamp: new Date().toISOString(),
+            level,
+            requestId,
+            message,
+            context: cleanContext,
+        };
+
+        if (level === 'ERROR') {
+            console.error(JSON.stringify(logPayload));
+        } else if (level === 'WARN') {
+            console.warn(JSON.stringify(logPayload));
+        } else if (isDebugLoggingEnabled()) {
+            console.log(JSON.stringify(logPayload));
+        }
+    } catch (e) {
+        console.error('Error in structuredLog:', e);
+    }
+}
+
+export function captureException(error: unknown, context?: Record<string, unknown>) {
+    try {
+        const cleanContext = scrubSensitiveData(context);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorStack = error instanceof Error ? error.stack : undefined;
+
+        const payload = {
+            timestamp: new Date().toISOString(),
+            level: 'FATAL',
+            message: errorMessage,
+            stack: errorStack,
+            context: cleanContext,
+        };
+
+        console.error(JSON.stringify(payload));
+    } catch (e) {
+        console.error('Error in captureException:', e);
     }
 }

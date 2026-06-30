@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient, requireAdminRequest } from '@/lib/serverAuth';
 import { verifyAdminAuthorizationTransaction } from '@/lib/adminAuthorizationVerification';
 import { enforceRateLimit } from '@/lib/rateLimit';
+import { structuredLog, captureException } from '@/lib/debug';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,7 @@ const ADMIN_UPDATE_AUTHORIZATION_RATE_LIMIT = {
 } as const;
 
 export async function POST(request: NextRequest) {
+    const requestId = request.headers.get('x-request-id') || 'unknown';
     try {
         const rateLimitResponse = enforceRateLimit(request, ADMIN_UPDATE_AUTHORIZATION_RATE_LIMIT);
         if (rateLimitResponse) {
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (findError && findError.code !== 'PGRST116') {
-            console.error('Error finding institution:', findError);
+            structuredLog('ERROR', 'Error finding institution', requestId, { error: findError });
             return NextResponse.json(
                 { success: false, error: 'Failed to find institution' },
                 { status: 500 },
@@ -87,7 +89,7 @@ export async function POST(request: NextRequest) {
                 .eq('id', institution.id);
 
             if (updateError) {
-                console.error('Error updating institution:', updateError);
+                structuredLog('ERROR', 'Error updating institution', requestId, { error: updateError });
                 return NextResponse.json(
                     { success: false, error: 'Failed to update institution' },
                     { status: 500 },
@@ -111,7 +113,7 @@ export async function POST(request: NextRequest) {
             transactionHash: verification.transactionHash,
         });
     } catch (error) {
-        console.error('Error in update-authorization:', error);
+        captureException(error, { requestId, context: 'POST /api/admin/update-authorization' });
         return NextResponse.json(
             {
                 success: false,

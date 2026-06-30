@@ -4,6 +4,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { isConnected, requestAccess, setAllowed } from '@stellar/freighter-api';
 import { toast } from 'sonner';
 
+import { captureException } from '@/lib/debug';
+
 interface StellarContextType {
     address: string | null;
     isConnecting: boolean;
@@ -63,7 +65,7 @@ export const StellarProvider = ({ children }: { children: React.ReactNode }) => 
                 toast.success('Wallet connected!');
             }
         } catch (error: unknown) {
-            console.error('Failed to connect Freighter:', error);
+            captureException(error, { context: 'connectFreighter' });
             let msg = (error instanceof Error ? error.message : String(error)) || 'Connection refused';
             // Detect user cancellation
             if (msg.includes('User canceled') || msg.includes('canceled')) {

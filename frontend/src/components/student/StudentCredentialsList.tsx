@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import QRCodeModal from './QRCodeModal';
 import { getIPFSUrl } from '@/lib/ipfs';
-import { debugLog } from '@/lib/debug';
+import { debugLog, captureException } from '@/lib/debug';
 import { supabase } from '@/lib/supabase';
 
 interface Credential {
@@ -164,7 +164,7 @@ export default function StudentCredentialsList({
             setTotal(payload.total ?? 0);
             setTotalPages(payload.totalPages ?? 0);
         } catch (err: unknown) {
-            console.error('Error loading credentials:', err);
+            captureException(err, { context: 'loadCredentials_student' });
             setError((err instanceof Error ? err.message : String(err)) || 'Failed to load credentials');
         } finally {
             setLoading(false);

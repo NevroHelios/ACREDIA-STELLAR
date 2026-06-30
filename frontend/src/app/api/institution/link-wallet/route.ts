@@ -7,6 +7,7 @@ import {
     requireAuthenticatedRequest,
 } from '@/lib/serverAuth';
 import { enforceRateLimit } from '@/lib/rateLimit';
+import { structuredLog, captureException } from '@/lib/debug';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +23,7 @@ function getAccessToken(request: NextRequest): string {
 }
 
 export async function POST(request: NextRequest) {
+    const requestId = request.headers.get('x-request-id') || 'unknown';
     try {
         const rateLimitResponse = enforceRateLimit(request, INSTITUTION_LINK_WALLET_RATE_LIMIT);
         if (rateLimitResponse) {
@@ -65,7 +67,7 @@ export async function POST(request: NextRequest) {
             .maybeSingle();
 
         if (findError) {
-            console.error('[institution/link-wallet] Error fetching institution:', findError);
+            structuredLog('ERROR', 'Error fetching institution', requestId, { error: findError });
             return NextResponse.json(
                 { success: false, error: 'Failed to load institution profile' },
                 { status: 500 },
@@ -100,7 +102,7 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (updateError) {
-            console.error('[institution/link-wallet] Error updating institution:', updateError);
+            structuredLog('ERROR', 'Error updating institution', requestId, { error: updateError });
             return NextResponse.json(
                 { success: false, error: 'Failed to link institution wallet' },
                 { status: 500 },
@@ -113,7 +115,7 @@ export async function POST(request: NextRequest) {
             changed: true,
         });
     } catch (error) {
-        console.error('[institution/link-wallet] Unhandled error:', error);
+        captureException(error, { requestId, context: 'POST /api/institution/link-wallet' });
         return NextResponse.json(
             { success: false, error: 'Failed to link institution wallet' },
             { status: 500 },

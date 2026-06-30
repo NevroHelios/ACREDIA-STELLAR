@@ -6,6 +6,7 @@ import {
     requireAuthenticatedRequest,
 } from '@/lib/serverAuth';
 import { enforceRateLimit } from '@/lib/rateLimit';
+import { structuredLog, captureException } from '@/lib/debug';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,7 @@ type CredentialRow = {
 };
 
 export async function GET(request: NextRequest) {
+    const requestId = request.headers.get('x-request-id') || 'unknown';
     try {
         const rateLimitResponse = enforceRateLimit(request, STUDENT_CREDENTIALS_RATE_LIMIT);
         if (rateLimitResponse) {
@@ -72,7 +74,7 @@ export async function GET(request: NextRequest) {
         const studentRow = initialStudentRow;
 
         if (studentError) {
-            console.error('[student/credentials] Error fetching student row:', studentError);
+            structuredLog('ERROR', 'Error fetching student row', requestId, { error: studentError });
             return NextResponse.json(
                 { success: false, error: 'Failed to load student profile' },
                 { status: 500 },
@@ -129,7 +131,7 @@ export async function GET(request: NextRequest) {
         });
 
     } catch (err) {
-        console.error('[student/credentials] Unhandled error:', err);
+        captureException(err, { requestId, context: 'GET /api/student/credentials' });
         return NextResponse.json(
             { success: false, error: 'Failed to fetch student credentials' },
             { status: 500 },
