@@ -1,6 +1,12 @@
 import type { NextConfig } from 'next';
+import { buildSecurityHeaders } from './src/lib/securityHeaders';
 
 const nextConfig: NextConfig = {
+    // ── Security headers ────────────────────────────────────────────────────
+    async headers() {
+        return buildSecurityHeaders(process.env.NODE_ENV === 'production');
+    },
+
     turbopack: {},
     webpack: (config, { isServer }) => {
         // Ignore test files and development dependencies from thread-stream
@@ -47,6 +53,8 @@ const nextConfig: NextConfig = {
         remotePatterns: [
             { protocol: 'https', hostname: 'gateway.pinata.cloud' },
             { protocol: 'https', hostname: '**.ipfs.dweb.link' },
+            { protocol: 'https', hostname: 'ipfs.io' },
+            { protocol: 'https', hostname: 'res.cloudinary.com' },
         ],
     },
 
