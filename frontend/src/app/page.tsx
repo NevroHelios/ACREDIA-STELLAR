@@ -7,7 +7,6 @@ import { Card } from '@/components/ui/card';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { useTheme } from 'next-themes';
 import { useAuth } from '@/contexts/AuthContext';
 import { BrandSectionHeader } from '@/components/marketing/BrandSectionHeader';
 import { HOMEPAGE_FEATURES } from '@/lib/marketingContent';
@@ -42,7 +41,6 @@ export default function Home() {
     const [showSolutions, setShowSolutions] = useState(false);
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const [mobileSolutionsOpen, setMobileSolutionsOpen] = useState(false);
-    const { theme, setTheme } = useTheme();
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { user, userRole } = useAuth();
     const router = useRouter();
@@ -174,14 +172,6 @@ export default function Home() {
                                     </div>
                                 )}
 
-                                <Button
-                                    type="button"
-                                    variant="surface"
-                                    className="h-9 justify-start px-2.5 text-sm"
-                                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                                >
-                                    {theme === 'dark' ? 'Light mode' : 'Dark mode'}
-                                </Button>
                                 <Link href="/about" onClick={() => setMobileNavOpen(false)}>
                                     <Button
                                         variant="ghost"
@@ -332,14 +322,6 @@ export default function Home() {
                                 )}
                             </div>
 
-                            <Button
-                                type="button"
-                                variant="surface"
-                                className="hidden sm:inline-flex"
-                                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                            >
-                                {theme === 'dark' ? 'Light' : 'Dark'}
-                            </Button>
                             <Link href="/about">
                                 <Button variant="ghost" className="text-muted-foreground hover:text-primary">
                                     About

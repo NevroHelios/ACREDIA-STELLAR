@@ -290,7 +290,68 @@ export function getServerRuntimeConfig(): ServerRuntimeConfig {
     return buildServerRuntimeConfig();
 }
 
-export const runtimeConfig = getRuntimeConfig();
+// Best-effort configuration used only when the strict validation above fails.
+// This prevents a single missing/invalid NEXT_PUBLIC_* value from throwing at
+// module-evaluation time and taking the entire app down into the global error
+// screen ("Acredia hit an unexpected issue"). Instead the app renders and only
+// the features that depend on the missing value are degraded. The failure is
+// still logged loudly (visible in the browser console and in build logs).
+function buildFallbackRuntimeConfig(): RuntimeConfig {
+    const safeUrl = (name: string, fallback = ''): string => {
+        const raw = readEnv(name);
+        if (!raw) return fallback;
+        try {
+            return new URL(raw).toString().replace(/\/$/, '');
+        } catch {
+            return fallback;
+        }
+    };
+
+    let stellar: StellarNetworkConfig;
+    try {
+        stellar = buildStellarConfig(false);
+    } catch {
+        stellar = NETWORK_DEFAULTS.testnet;
+    }
+
+    return {
+        isProduction: process.env.NODE_ENV === 'production',
+        supabase: {
+            url: safeUrl('NEXT_PUBLIC_SUPABASE_URL'),
+            anonKey: readEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY') ?? '',
+        },
+        stellar,
+        contracts: {
+            CREDENTIAL_NFT: readEnv('NEXT_PUBLIC_CREDENTIAL_NFT_CONTRACT') ?? '',
+            CREDENTIAL_REGISTRY: readEnv('NEXT_PUBLIC_CREDENTIAL_REGISTRY_CONTRACT') ?? '',
+        },
+        ipfs: {
+            gatewayUrl: safeUrl('NEXT_PUBLIC_PINATA_GATEWAY', 'https://gateway.pinata.cloud'),
+        },
+        debug: {
+            enableLogs: false,
+        },
+    };
+}
+
+function initRuntimeConfig(): RuntimeConfig {
+    try {
+        return buildRuntimeConfig();
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        // Intentionally logged directly (not via debug.ts, whose logging is gated
+        // off in production) so this misconfiguration is always visible.
+        // eslint-disable-next-line no-console
+        console.error(
+            '[runtime-config] Public configuration is missing or invalid; the app is running in '
+                + 'degraded mode. Set the required NEXT_PUBLIC_* environment variables in your hosting '
+                + `platform (e.g. Vercel) for the Production environment and redeploy. Details: ${message}`,
+        );
+        return buildFallbackRuntimeConfig();
+    }
+}
+
+export const runtimeConfig = initRuntimeConfig();
 export const serverRuntimeConfig = getServerRuntimeConfig();
 
 export function getConfiguredContractId(contractName: ContractName): string {
