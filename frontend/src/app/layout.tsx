@@ -10,9 +10,9 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
     title: 'Acredia - Blockchain Academic Credentials',
     description: 'Secure, tamper-proof academic credentials powered by blockchain',
-    icons: {
-        icon: '/Acredia.png',
-    },
+    // Favicon/icons are provided by the file-based conventions in this directory
+    // (src/app/favicon.ico and src/app/icon.png), so the browser's default
+    // `/favicon.ico` request resolves on every route — including error pages.
 };
 
 export const viewport: Viewport = {

@@ -2,12 +2,20 @@ import type { NextConfig } from 'next';
 import { buildSecurityHeaders } from './src/lib/securityHeaders';
 
 const nextConfig: NextConfig = {
+    // Pin the project root to this frontend directory. Without this, Next infers
+    // the workspace root from the nearest lockfile and picks the stray empty
+    // package-lock.json at the repo root, emitting a "multiple lockfiles" warning
+    // and tracing files from the wrong directory.
+    outputFileTracingRoot: __dirname,
+
     // ── Security headers ────────────────────────────────────────────────────
     async headers() {
         return buildSecurityHeaders(process.env.NODE_ENV === 'production');
     },
 
-    turbopack: {},
+    turbopack: {
+        root: __dirname,
+    },
     webpack: (config, { isServer }) => {
         // Ignore test files and development dependencies from thread-stream
         config.module = config.module || {};
