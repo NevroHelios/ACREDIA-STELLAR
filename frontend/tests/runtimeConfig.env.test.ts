@@ -16,12 +16,25 @@ describe('runtime config environment validation', () => {
         vi.unstubAllEnvs();
     });
 
-    it('throws a clear error when required runtime values are missing', async () => {
+    it('logs a clear error and degrades gracefully when required runtime values are missing', async () => {
         vi.stubEnv('NODE_ENV', 'production');
         vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', '');
         vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', '');
+        const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-        await expect(import('../src/lib/runtimeConfig')).rejects.toThrow(/NEXT_PUBLIC_SUPABASE_URL/);
+        // Importing must NOT throw: a missing public value should never crash the
+        // whole app (which would show the global error screen in the browser or
+        // fail the production build). It degrades to empty values instead.
+        const mod = await import('../src/lib/runtimeConfig');
+
+        expect(mod.runtimeConfig.supabase.url).toBe('');
+        expect(mod.runtimeConfig.supabase.anonKey).toBe('');
+        expect(mod.runtimeConfig.isProduction).toBe(true);
+
+        // The misconfiguration is still surfaced loudly and actionably.
+        expect(errorSpy).toHaveBeenCalledWith(expect.stringMatching(/NEXT_PUBLIC_SUPABASE_URL/));
+
+        errorSpy.mockRestore();
     });
 
     it('exposes a typed server runtime config for admin and pinata settings', async () => {
