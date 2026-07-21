@@ -37,7 +37,7 @@ export function RouteStateScreen({
                             <AlertCircle className="h-8 w-8" />
                         )}
                     </div>
-                    <p className="eyebrow mb-3">Acredia</p>
+                    <p className="eyebrow mb-3">ACREDIA</p>
                     <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                         {title}
                     </h1>
