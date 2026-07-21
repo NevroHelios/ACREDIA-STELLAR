@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
     ArrowRight,
@@ -19,7 +20,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { SiteNavbar } from '@/components/marketing/SiteNavbar';
 import { SiteFooter } from '@/components/marketing/SiteFooter';
-import { CredentialArtwork } from '@/components/marketing/CredentialArtwork';
 
 const fadeUp = {
     initial: { opacity: 0, y: 24 },
@@ -164,13 +164,20 @@ export default function Home() {
                             initial={{ opacity: 0, scale: 0.96 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-                            className="relative mx-auto w-full max-w-xl lg:max-w-none"
+                            className="relative mx-auto w-full max-w-[260px] sm:max-w-xs lg:ml-auto lg:mr-0 lg:max-w-md"
                         >
                             <motion.div
                                 animate={{ y: [0, -14, 0] }}
                                 transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
                             >
-                                <CredentialArtwork />
+                                <Image
+                                    src="/auth-illustration.png"
+                                    alt="Students holding verified academic credentials secured on the Stellar blockchain"
+                                    width={960}
+                                    height={1130}
+                                    priority
+                                    className="h-auto w-full"
+                                />
                             </motion.div>
                         </motion.div>
                     </div>
