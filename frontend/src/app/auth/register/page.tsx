@@ -3,12 +3,12 @@
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
+import { Building2, CheckCircle2, GraduationCap, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Building2, CheckCircle2, GraduationCap, Mail } from 'lucide-react';
+import { AuthShell } from '@/components/auth/AuthShell';
+import { cn } from '@/lib/utils';
 import { resendVerificationEmail, signUp } from '@/lib/supabase';
 import {
     buildAuthCallbackUrl,
@@ -27,7 +27,9 @@ function RegisterForm() {
     const roleParam = searchParams.get('role');
     const nextRedirect = sanitizeAuthRedirect(searchParams.get('next'));
 
-    const [role, setRole] = useState<UserRole>(roleParam === 'institution' ? 'institution' : 'student');
+    const [role, setRole] = useState<UserRole>(
+        roleParam === 'institution' ? 'institution' : 'student',
+    );
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -96,7 +98,7 @@ function RegisterForm() {
         try {
             const { error } = await resendVerificationEmail(
                 confirmationEmail,
-                buildAuthCallbackUrl('/auth/login', nextRedirect)
+                buildAuthCallbackUrl('/auth/login', nextRedirect),
             );
 
             if (error) {
@@ -114,237 +116,216 @@ function RegisterForm() {
 
     if (confirmationEmail) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-teal-50 to-cyan-50 flex items-center justify-center p-4">
-                <Card className="w-full max-w-md border-gray-200 bg-white shadow-2xl p-8">
-                    <div className="flex flex-col items-center mb-8">
-                        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-teal-50">
-                            <Mail className="h-11 w-11 text-teal-600" />
-                        </div>
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2">Check Your Email</h1>
-                        <p className="text-gray-600 text-center">
-                            We sent a verification link to <span className="font-medium text-gray-900">{confirmationEmail}</span>.
-                            Confirm your email, then continue to Acredia.
-                        </p>
+            <AuthShell title="Check your email" subtitle="One more step to activate your account.">
+                <div className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                        <Mail className="h-7 w-7 text-primary" />
                     </div>
+                    <p className="mt-5 text-sm text-muted-foreground">
+                        We sent a verification link to{' '}
+                        <span className="font-semibold text-foreground">{confirmationEmail}</span>.
+                        Confirm your email, then continue to Acredia.
+                    </p>
 
                     {error && (
-                        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded" role="alert">
+                        <div
+                            className="mt-4 rounded-lg border border-destructive/25 bg-destructive/8 px-4 py-3 text-sm text-destructive"
+                            role="alert"
+                        >
                             {error}
                         </div>
                     )}
-
                     {message && (
-                        <div className="mb-4 bg-teal-50 border border-teal-200 text-teal-700 px-4 py-2 rounded" role="status">
+                        <div
+                            className="mt-4 rounded-lg border border-success/25 bg-success/8 px-4 py-3 text-sm text-success"
+                            role="status"
+                        >
                             {message}
                         </div>
                     )}
 
-                    <div className="space-y-3">
+                    <div className="mt-6 space-y-3">
                         <Button
                             type="button"
+                            size="lg"
                             disabled={resending}
                             onClick={handleResendVerification}
-                            className="w-full bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white"
+                            className="w-full"
                         >
-                            {resending ? 'Sending...' : 'Resend verification email'}
+                            {resending ? 'Sending…' : 'Resend verification email'}
                         </Button>
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={() => router.push(`/auth/login?next=${encodeURIComponent(nextRedirect)}`)}
+                            size="lg"
+                            onClick={() =>
+                                router.push(
+                                    `/auth/login?next=${encodeURIComponent(nextRedirect)}`,
+                                )
+                            }
                             className="w-full"
                         >
                             Go to sign in
                         </Button>
                     </div>
-                </Card>
-            </div>
+                </div>
+            </AuthShell>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-teal-50 to-cyan-50 flex items-center justify-center p-4">
-            <Card className="w-full max-w-md border-gray-200 bg-white shadow-2xl p-8">
-                <div className="flex flex-col items-center mb-8">
-                    <Image
-                        src="/logo.png"
-                        alt="Acredia Logo"
-                        width={80}
-                        height={80}
-                        className="rounded-xl mb-4"
-                    />
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
-                    <p className="text-gray-600 text-center">
-                        Join Acredia to manage your credentials
-                    </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <button
-                        type="button"
-                        onClick={() => setRole('institution')}
-                        aria-pressed={role === 'institution'}
-                        className={`p-4 rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-blue-300 ${
-                            role === 'institution'
-                                ? 'border-blue-500 bg-blue-500/10'
-                                : 'border-slate-300 hover:border-slate-400 bg-white'
-                        }`}
-                    >
-                        <Building2
-                            className={`h-11 w-11 mx-auto mb-2 ${role === 'institution' ? 'text-blue-600' : 'text-slate-700'}`}
-                        />
-                        <p
-                            className={`${role === 'institution' ? 'text-blue-700 font-medium' : 'text-slate-700 font-medium'}`}
-                        >
-                            Institution
-                        </p>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setRole('student')}
-                        aria-pressed={role === 'student'}
-                        className={`p-4 rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-blue-300 ${
-                            role === 'student'
-                                ? 'border-blue-500 bg-blue-500/10'
-                                : 'border-slate-300 hover:border-slate-400 bg-white'
-                        }`}
-                    >
-                        <GraduationCap
-                            className={`h-11 w-11 mx-auto mb-2 ${role === 'student' ? 'text-blue-600' : 'text-slate-700'}`}
-                        />
-                        <p
-                            className={`${role === 'student' ? 'text-blue-700 font-medium' : 'text-slate-700 font-medium'}`}
-                        >
-                            Student
-                        </p>
-                    </button>
-                </div>
-
-                <form onSubmit={handleRegister} className="space-y-4">
-                    <div>
-                        <Label htmlFor="name" className="text-gray-900">
-                            {role === 'institution' ? 'Institution Name' : 'Full Name'}
-                        </Label>
-                        <Input
-                            id="name"
-                            type="text"
-                            placeholder={role === 'institution' ? 'Harvard University' : 'John Doe'}
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            required
-                            autoComplete="name"
-                            className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400"
-                        />
-                    </div>
-
-                    <div>
-                        <Label htmlFor="email" className="text-gray-900">
-                            Email
-                        </Label>
-                        <Input
-                            id="email"
-                            type="email"
-                            placeholder="your.email@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            autoComplete="email"
-                            className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400"
-                        />
-                    </div>
-
-                    <div>
-                        <Label htmlFor="password" className="text-gray-900">
-                            Password
-                        </Label>
-                        <Input
-                            id="password"
-                            type="password"
-                            placeholder="Password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            autoComplete="new-password"
-                            aria-describedby="password-requirements"
-                            className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400"
-                        />
-                        <ul id="password-requirements" className="mt-2 grid gap-1 text-sm text-gray-600">
-                            {passwordRequirements.map((requirement) => (
-                                <li key={requirement.id} className="flex items-center gap-2">
-                                    <CheckCircle2
-                                        className={`h-4 w-4 ${requirement.isMet ? 'text-teal-600' : 'text-gray-300'}`}
-                                        aria-hidden="true"
-                                    />
-                                    <span>{requirement.label}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-
-                    <div>
-                        <Label htmlFor="confirm-password" className="text-gray-900">
-                            Confirm Password
-                        </Label>
-                        <Input
-                            id="confirm-password"
-                            type="password"
-                            placeholder="Confirm password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            required
-                            autoComplete="new-password"
-                            aria-invalid={Boolean(confirmPassword) && password !== confirmPassword}
-                            className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400"
-                        />
-                    </div>
-
-                    {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded" role="alert">
-                            {error}
-                        </div>
-                    )}
-
-                    <Button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white"
-                    >
-                        {loading ? 'Creating account...' : 'Create Account'}
-                    </Button>
-                </form>
-
-                <div className="mt-6 text-center">
-                    <p className="text-gray-600">
-                        Already have an account?{' '}
-                        <Link
-                            href={`/auth/login?next=${encodeURIComponent(nextRedirect)}`}
-                            className="text-teal-600 hover:text-teal-700 font-medium"
-                        >
-                            Sign in
-                        </Link>
-                    </p>
-                </div>
-
-                <div className="mt-4 text-center">
+        <AuthShell
+            title="Create your account"
+            subtitle="Join Acredia to issue, own, or verify credentials."
+            footer={
+                <p className="text-center text-sm text-muted-foreground">
+                    Already have an account?{' '}
                     <Link
-                        href="/"
-                        className="text-gray-500 hover:text-gray-700 text-sm"
+                        href={`/auth/login?next=${encodeURIComponent(nextRedirect)}`}
+                        className="font-semibold text-primary hover:underline"
                     >
-                        Back to home
+                        Sign in
                     </Link>
+                </p>
+            }
+        >
+            {/* Role selector */}
+            <div className="mb-6">
+                <Label className="mb-2 block">I am registering as</Label>
+                <div className="grid grid-cols-2 gap-3">
+                    {(
+                        [
+                            { value: 'institution', label: 'Institution', icon: Building2 },
+                            { value: 'student', label: 'Student', icon: GraduationCap },
+                        ] as const
+                    ).map((option) => {
+                        const active = role === option.value;
+                        return (
+                            <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => setRole(option.value)}
+                                aria-pressed={active}
+                                className={cn(
+                                    'flex flex-col items-center gap-2 rounded-xl border p-4 text-sm font-medium transition-all',
+                                    active
+                                        ? 'border-primary bg-primary/5 text-primary ring-2 ring-primary/15'
+                                        : 'border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground',
+                                )}
+                            >
+                                <option.icon className="h-7 w-7" />
+                                {option.label}
+                            </button>
+                        );
+                    })}
                 </div>
-            </Card>
-        </div>
+            </div>
+
+            <form onSubmit={handleRegister} className="space-y-5">
+                <div className="space-y-2">
+                    <Label htmlFor="name">
+                        {role === 'institution' ? 'Institution name' : 'Full name'}
+                    </Label>
+                    <Input
+                        id="name"
+                        type="text"
+                        placeholder={role === 'institution' ? 'Stellar University' : 'Jane Doe'}
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                        autoComplete="name"
+                    />
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        autoComplete="email"
+                    />
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                        id="password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        autoComplete="new-password"
+                        aria-describedby="password-requirements"
+                    />
+                    <ul id="password-requirements" className="mt-2 grid gap-1.5 text-sm">
+                        {passwordRequirements.map((requirement) => (
+                            <li
+                                key={requirement.id}
+                                className={cn(
+                                    'flex items-center gap-2',
+                                    requirement.isMet
+                                        ? 'text-success'
+                                        : 'text-muted-foreground',
+                                )}
+                            >
+                                <CheckCircle2
+                                    className={cn(
+                                        'h-4 w-4',
+                                        requirement.isMet ? 'text-success' : 'text-muted-foreground/40',
+                                    )}
+                                    aria-hidden="true"
+                                />
+                                <span>{requirement.label}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirm password</Label>
+                    <Input
+                        id="confirm-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        autoComplete="new-password"
+                        aria-invalid={Boolean(confirmPassword) && password !== confirmPassword}
+                    />
+                </div>
+
+                {error && (
+                    <div
+                        className="rounded-lg border border-destructive/25 bg-destructive/8 px-4 py-3 text-sm text-destructive"
+                        role="alert"
+                    >
+                        {error}
+                    </div>
+                )}
+
+                <Button type="submit" size="lg" disabled={loading} className="w-full">
+                    {loading ? 'Creating account…' : 'Create account'}
+                </Button>
+            </form>
+        </AuthShell>
     );
 }
 
 export default function RegisterPage() {
     return (
-        <Suspense fallback={
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-teal-50 to-cyan-50 flex items-center justify-center">
-                <div className="text-gray-700">Loading...</div>
-            </div>
-        }>
+        <Suspense
+            fallback={
+                <div className="flex min-h-screen items-center justify-center bg-background">
+                    <div className="text-muted-foreground">Loading…</div>
+                </div>
+            }
+        >
             <RegisterForm />
         </Suspense>
     );

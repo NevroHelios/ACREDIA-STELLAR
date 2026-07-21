@@ -57,7 +57,7 @@ export function CredentialUploadFormSections({
     return (
         <>
             <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Student Information</h3>
+                <h3 className="text-lg font-semibold text-foreground">Student Information</h3>
                 <div>
                     <Label htmlFor="studentName">Student Name *</Label>
                     <Input
@@ -91,7 +91,7 @@ export function CredentialUploadFormSections({
             </div>
 
             <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Credential Details</h3>
+                <h3 className="text-lg font-semibold text-foreground">Credential Details</h3>
                 <div>
                     <Label htmlFor="credentialType">Credential Type *</Label>
                     <Select
@@ -154,8 +154,8 @@ export function CredentialUploadFormSections({
 
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900">Subject-wise Marks (Optional)</h3>
-                    <Button type="button" onClick={addSubject} variant="outline" size="sm" className="text-teal-600 border-teal-600 hover:bg-teal-50">
+                    <h3 className="text-lg font-semibold text-foreground">Subject-wise Marks (Optional)</h3>
+                    <Button type="button" onClick={addSubject} variant="outline" size="sm">
                         <Plus className="mr-1 h-4 w-4" />
                         Add Subject
                     </Button>
@@ -163,7 +163,7 @@ export function CredentialUploadFormSections({
                 {subjects.length > 0 ? (
                     <div className="space-y-3">
                         {subjects.map((subject) => (
-                            <Card key={subject.id} className="p-4 bg-gray-50">
+                            <Card key={subject.id} className="bg-secondary/40 p-4">
                                 <div className="flex items-start gap-3">
                                     <div className="flex-1 grid grid-cols-1 gap-3 md:grid-cols-4">
                                         <div>
@@ -184,11 +184,11 @@ export function CredentialUploadFormSections({
                                         </div>
                                     </div>
                                     <div className="flex flex-col items-end gap-2 pt-5">
-                                        <Button type="button" onClick={() => removeSubject(subject.id)} variant="ghost" size="sm" className="h-9 w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50" aria-label="Remove subject">
+                                        <Button type="button" onClick={() => removeSubject(subject.id)} variant="ghost" size="sm" className="h-9 w-9 p-0 text-muted-foreground hover:bg-destructive/8 hover:text-destructive" aria-label="Remove subject">
                                             <X className="h-4 w-4" />
                                         </Button>
                                         {subject.marks && subject.maxMarks && (
-                                            <span className="text-xs font-medium text-teal-600">
+                                            <span className="text-xs font-semibold text-success">
                                                 {calculatePercentage(subject.marks, subject.maxMarks)}
                                             </span>
                                         )}
@@ -196,37 +196,37 @@ export function CredentialUploadFormSections({
                                 </div>
                             </Card>
                         ))}
-                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                            <p className="text-xs text-blue-800">💡 <strong>Total Subjects:</strong> {subjects.length} | <strong className="ml-2">Average:</strong> {subjects.length > 0 && subjects.every((s) => s.marks && s.maxMarks) ? `${((subjects.reduce((acc, s) => acc + (parseFloat(s.marks) / parseFloat(s.maxMarks)) * 100, 0)) / subjects.length).toFixed(2)}%` : 'N/A'}</p>
+                        <div className="rounded-lg border border-info/25 bg-info/8 p-3">
+                            <p className="text-xs text-foreground">💡 <strong>Total Subjects:</strong> {subjects.length} | <strong className="ml-2">Average:</strong> {subjects.length > 0 && subjects.every((s) => s.marks && s.maxMarks) ? `${((subjects.reduce((acc, s) => acc + (parseFloat(s.marks) / parseFloat(s.maxMarks)) * 100, 0)) / subjects.length).toFixed(2)}%` : 'N/A'}</p>
                         </div>
                     </div>
                 ) : (
-                    <div className="rounded-lg border border-dashed border-gray-300 py-4 text-center">
-                        <p className="text-sm text-gray-500">No subjects added yet. Click "Add Subject" to include subject-wise marks.</p>
+                    <div className="rounded-lg border border-dashed border-border py-4 text-center">
+                        <p className="text-sm text-muted-foreground">No subjects added yet. Click "Add Subject" to include subject-wise marks.</p>
                     </div>
                 )}
             </div>
 
             <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Credential Document</h3>
-                <div className="rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors hover:border-teal-500">
+                <h3 className="text-lg font-semibold text-foreground">Credential Document</h3>
+                <div className="rounded-lg border-2 border-dashed border-border p-6 text-center transition-colors hover:border-primary">
                     <input type="file" id="fileUpload" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileChange} />
                     <label htmlFor="fileUpload" className="cursor-pointer">
                         <div className="flex flex-col items-center space-y-3">
                             {selectedFile ? (
                                 <>
-                                    <CheckCircle2 className="h-12 w-12 text-teal-600" />
+                                    <CheckCircle2 className="h-12 w-12 text-success" />
                                     <div>
-                                        <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
-                                        <p className="text-xs text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                                        <p className="text-sm font-medium text-foreground">{selectedFile.name}</p>
+                                        <p className="text-xs text-muted-foreground">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
                                     </div>
                                 </>
                             ) : (
                                 <>
-                                    <Upload className="h-12 w-12 text-gray-400" />
+                                    <Upload className="h-12 w-12 text-muted-foreground" />
                                     <div>
-                                        <p className="text-sm font-medium text-gray-900">Click to upload credential</p>
-                                        <p className="text-xs text-gray-500">PDF, JPG, or PNG (max 10MB)</p>
+                                        <p className="text-sm font-medium text-foreground">Click to upload credential</p>
+                                        <p className="text-xs text-muted-foreground">PDF, JPG, or PNG (max 10MB)</p>
                                     </div>
                                 </>
                             )}
@@ -235,12 +235,12 @@ export function CredentialUploadFormSections({
                 </div>
                 {previewUrl && (
                     <div className="mt-4">
-                        <p className="mb-2 text-sm font-medium text-gray-700">Preview:</p>
-                        <Image src={previewUrl} alt="Preview" width={400} height={256} className="max-h-64 max-w-full rounded-lg border border-gray-200" style={{ objectFit: 'contain' }} unoptimized />
+                        <p className="mb-2 text-sm font-medium text-foreground">Preview:</p>
+                        <Image src={previewUrl} alt="Preview" width={400} height={256} className="max-h-64 max-w-full rounded-lg border border-border" style={{ objectFit: 'contain' }} unoptimized />
                     </div>
                 )}
                 {selectedFile && selectedFile.type === 'application/pdf' && (
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                         <FileText className="h-5 w-5" />
                         <span>PDF files will be uploaded to IPFS</span>
                     </div>

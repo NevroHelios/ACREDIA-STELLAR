@@ -1,164 +1,319 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+/* Dark mode is intentionally disabled; the `dark` variant stays gated on a
+   `.dark` ancestor that is never applied, so any residual `dark:` classes are
+   inert and the app renders in light mode only. */
 @custom-variant dark (&:is(.dark *));
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Theme mapping — exposes the semantic + brand tokens as Tailwind utilities
+   (bg-primary, text-gold, shadow-md, rounded-lg, animate-float, …).
+   ────────────────────────────────────────────────────────────────────────── */
 @theme inline {
     --color-background: var(--background);
     --color-foreground: var(--foreground);
-    --font-sans: var(--font-geist-sans);
-    --font-mono: var(--font-geist-mono);
-    --color-sidebar-ring: var(--sidebar-ring);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-sidebar: var(--sidebar);
-    --color-chart-5: var(--chart-5);
-    --color-chart-4: var(--chart-4);
-    --color-chart-3: var(--chart-3);
-    --color-chart-2: var(--chart-2);
-    --color-chart-1: var(--chart-1);
-    --color-ring: var(--ring);
-    --color-input: var(--input);
-    --color-border: var(--border);
-    --color-destructive: var(--destructive);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-accent: var(--accent);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-muted: var(--muted);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-secondary: var(--secondary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-primary: var(--primary);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-popover: var(--popover);
-    --color-card-foreground: var(--card-foreground);
+
     --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+
+    /* Brand */
+    --color-brand: var(--brand);
+    --color-brand-foreground: var(--brand-foreground);
+    --color-gold: var(--gold);
+    --color-gold-foreground: var(--gold-foreground);
+
+    /* Semantic status */
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+    --color-info: var(--info);
+    --color-info-foreground: var(--info-foreground);
+
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    --font-mono: var(--font-mono), ui-monospace, monospace;
+
     --radius-sm: calc(var(--radius) - 4px);
     --radius-md: calc(var(--radius) - 2px);
     --radius-lg: var(--radius);
     --radius-xl: calc(var(--radius) + 4px);
+    --radius-2xl: calc(var(--radius) + 8px);
+
+    /* Soft, navy-tinted elevation */
+    --shadow-xs: 0 1px 2px 0 rgb(10 37 64 / 0.05);
+    --shadow-sm: 0 1px 3px 0 rgb(10 37 64 / 0.08), 0 1px 2px -1px rgb(10 37 64 / 0.05);
+    --shadow-md: 0 6px 16px -4px rgb(10 37 64 / 0.1), 0 2px 6px -2px rgb(10 37 64 / 0.06);
+    --shadow-lg: 0 14px 32px -8px rgb(10 37 64 / 0.14), 0 4px 10px -4px rgb(10 37 64 / 0.08);
+    --shadow-xl: 0 28px 56px -14px rgb(10 37 64 / 0.2);
+
+    --animate-float: float 7s ease-in-out infinite;
+    --animate-float-delayed: float 7s ease-in-out 1.6s infinite;
+    --animate-shimmer: shimmer 2.2s linear infinite;
+
+    @keyframes float {
+        0%,
+        100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-12px);
+        }
+    }
+
+    @keyframes shimmer {
+        0% {
+            background-position: -400px 0;
+        }
+        100% {
+            background-position: 400px 0;
+        }
+    }
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Brand palette — Navy + Gold, clean & institutional (light mode only)
+   ────────────────────────────────────────────────────────────────────────── */
 :root {
-    --radius: 0.625rem;
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --radius: 0.75rem;
+
+    /* Neutrals (cool, navy-tinted slate) */
+    --background: #ffffff;
+    --foreground: #0f2136;
+    --card: #ffffff;
+    --card-foreground: #0f2136;
+    --popover: #ffffff;
+    --popover-foreground: #0f2136;
+
+    /* Brand — deep navy */
+    --primary: #0a2540;
+    --primary-foreground: #ffffff;
+    --brand: #0a2540;
+    --brand-foreground: #ffffff;
+
+    /* Brand — gold accent */
+    --gold: #c19a2e;
+    --gold-foreground: #0a2540;
+
+    /* Supporting surfaces */
+    --secondary: #eef2f7;
+    --secondary-foreground: #0f2136;
+    --muted: #f4f6fa;
+    --muted-foreground: #5a6b80;
+    --accent: #eaf0f7;
+    --accent-foreground: #0a2540;
+
+    /* Status */
+    --destructive: #c53434;
+    --destructive-foreground: #ffffff;
+    --success: #12805c;
+    --success-foreground: #ffffff;
+    --warning: #b45309;
+    --warning-foreground: #ffffff;
+    --info: #1d6fb8;
+    --info-foreground: #ffffff;
+
+    /* Lines & focus */
+    --border: #e2e8f0;
+    --input: #dbe2ec;
+    --ring: #0a2540;
+
+    /* Data viz — navy → gold harmonious set */
+    --chart-1: #0a2540;
+    --chart-2: #1d6fb8;
+    --chart-3: #12805c;
+    --chart-4: #c19a2e;
+    --chart-5: #7c8aa0;
+
+    /* Convenience navy/gold ramps for gradients & fills */
+    --navy-700: #0f2f52;
+    --navy-800: #0a2540;
+    --navy-900: #071a2f;
+    --gold-400: #d9b64e;
+    --gold-500: #c19a2e;
+    --gold-600: #a67f1f;
 }
 
-/* Dark mode has been removed. The app renders in light mode only. The
-   `@custom-variant dark` above keeps any residual `dark:` utility classes gated
-   on a `.dark` ancestor that is never applied, so they stay inert. */
-
+/* ──────────────────────────────────────────────────────────────────────────
+   Base
+   ────────────────────────────────────────────────────────────────────────── */
 @layer base {
     * {
-        @apply border-border outline-ring/50;
+        @apply border-border;
     }
+
+    html {
+        scroll-behavior: smooth;
+        -webkit-text-size-adjust: 100%;
+    }
+
     html,
     body {
         overflow-x: hidden;
     }
+
     body {
         @apply bg-background text-foreground antialiased;
+        font-feature-settings: 'cv11', 'ss01';
+        text-rendering: optimizeLegibility;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+        @apply tracking-tight text-foreground;
+        text-wrap: balance;
+    }
+
+    p {
+        text-wrap: pretty;
+    }
+
+    ::selection {
+        background-color: color-mix(in srgb, var(--gold) 26%, transparent);
+        color: var(--navy-900);
+    }
+
+    /* Consistent, on-brand focus ring for keyboard users */
+    :focus-visible {
+        outline: 2px solid color-mix(in srgb, var(--ring) 55%, transparent);
+        outline-offset: 2px;
+    }
+
+    /* Respect reduced-motion preferences */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
     }
 }
 
-@layer utilities {
+/* ──────────────────────────────────────────────────────────────────────────
+   Reusable brand components / helpers
+   ────────────────────────────────────────────────────────────────────────── */
+@layer components {
     .container-shell {
         @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+    }
+
+    .container-tight {
+        @apply mx-auto w-full max-w-3xl px-4 sm:px-6;
     }
 
     .section-stack {
         @apply space-y-6 md:space-y-8;
     }
 
+    .section-pad {
+        @apply py-16 sm:py-20 lg:py-24;
+    }
+
     .surface-card {
-        @apply rounded-2xl border border-border/80 bg-card/95 p-6 shadow-sm;
+        @apply rounded-2xl border border-border bg-card p-6 shadow-sm;
+    }
+
+    .eyebrow {
+        @apply inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground;
     }
 
     .section-heading {
-        @apply text-3xl font-semibold tracking-tight text-foreground sm:text-4xl;
+        @apply text-3xl font-semibold tracking-tight text-foreground sm:text-4xl lg:text-[2.75rem] lg:leading-[1.1];
     }
 
     .section-copy {
-        @apply max-w-3xl text-base leading-7 text-muted-foreground sm:text-lg;
+        @apply max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg;
     }
 
-    .text-gray-900,
-    .text-gray-800,
-    .text-gray-700 {
-        color: var(--foreground) !important;
+    /* Brand gradient surfaces (deep navy) */
+    .bg-brand-gradient {
+        background-image: linear-gradient(135deg, var(--navy-700) 0%, var(--navy-900) 100%);
     }
 
-    .text-gray-600,
-    .text-gray-500,
-    .text-gray-400,
-    .text-gray-300 {
-        color: var(--muted-foreground) !important;
+    .bg-brand-mesh {
+        background-color: var(--navy-800);
+        background-image:
+            radial-gradient(60% 80% at 15% 0%, rgb(29 111 184 / 0.35) 0%, transparent 60%),
+            radial-gradient(50% 70% at 100% 20%, rgb(193 154 46 / 0.22) 0%, transparent 55%),
+            linear-gradient(160deg, var(--navy-700) 0%, var(--navy-900) 100%);
     }
 
-    .bg-white {
-        background-color: var(--card) !important;
+    /* Subtle page background wash for light sections */
+    .bg-app-wash {
+        background-color: var(--background);
+        background-image:
+            radial-gradient(60% 50% at 100% 0%, rgb(29 111 184 / 0.06) 0%, transparent 60%),
+            radial-gradient(50% 45% at 0% 10%, rgb(193 154 46 / 0.05) 0%, transparent 55%);
     }
 
-    .bg-gray-50,
-    .bg-gray-100 {
-        background-color: var(--muted) !important;
+    .text-gradient-gold {
+        background-image: linear-gradient(90deg, var(--gold-400), var(--gold-600));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
     }
 
-    .border-gray-200,
-    .border-gray-100 {
-        border-color: var(--border) !important;
+    .badge-gold {
+        @apply inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold;
+        border-color: color-mix(in srgb, var(--gold) 40%, transparent);
+        background-color: color-mix(in srgb, var(--gold) 12%, transparent);
+        color: var(--gold-600);
     }
 
-    .bg-orange-50,
-    .from-red-50,
-    .to-orange-50,
-    .via-red-50 {
-        background-color: var(--accent) !important;
+    /* Thin gold hairline used as a premium divider accent */
+    .rule-gold {
+        height: 2px;
+        width: 3rem;
+        border-radius: 9999px;
+        background-image: linear-gradient(90deg, var(--gold-500), transparent);
     }
 
-    .from-gray-50 {
-        --tw-gradient-from: var(--muted) !important;
+    /* Focusable, accessible skip link */
+    .skip-link {
+        @apply sr-only rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground;
     }
-
-    .via-teal-50 {
-        --tw-gradient-via: color-mix(in srgb, var(--accent) 75%, transparent) !important;
+    .skip-link:focus {
+        @apply not-sr-only fixed left-4 top-4 z-[100];
     }
+}
 
-    .to-cyan-50 {
-        --tw-gradient-to: color-mix(in srgb, var(--accent) 70%, transparent) !important;
+@layer utilities {
+    .shimmer {
+        background-image: linear-gradient(
+            90deg,
+            transparent 0%,
+            color-mix(in srgb, var(--muted-foreground) 12%, transparent) 50%,
+            transparent 100%
+        );
+        background-size: 800px 100%;
     }
 }

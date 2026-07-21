@@ -162,40 +162,40 @@ export function AuthorizeIssuer() {
     };
 
     return (
-        <Card className="border-gray-200 bg-white p-6 shadow-lg">
+        <Card className="p-6">
             <div className="mb-4 flex items-center space-x-3">
-                <Shield className="h-6 w-6 text-teal-600" />
-                <h2 className="text-2xl font-bold text-gray-900">Authorize Issuer</h2>
+                <Shield className="h-6 w-6 text-primary" />
+                <h2 className="text-2xl font-bold text-foreground">Authorize Issuer</h2>
             </div>
 
-            <p className="mb-6 text-gray-600">
+            <p className="mb-6 text-muted-foreground">
                 Only authorized wallets can issue credentials. Use the contract owner wallet to
                 authorize other wallets.
             </p>
 
             {contractOwner && (
-                <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
-                    <p className="mb-1 text-sm font-medium text-blue-900">Contract Owner Address</p>
-                    <p className="break-all text-xs font-mono text-blue-700">{contractOwner}</p>
-                    <p className="mt-2 text-xs text-blue-600">
+                <div className="mb-4 rounded-lg border border-info/25 bg-info/8 p-4">
+                    <p className="mb-1 text-sm font-medium text-foreground">Contract Owner Address</p>
+                    <p className="break-all text-xs font-mono text-muted-foreground">{contractOwner}</p>
+                    <p className="mt-2 text-xs text-muted-foreground">
                         Only this wallet can authorize other institutions
                     </p>
                 </div>
             )}
 
-            <div className="mb-6 rounded-lg border border-teal-200 bg-teal-50 p-4">
+            <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 p-4">
                 <div className="flex items-start justify-between">
                     <div className="flex-1">
-                        <p className="mb-1 text-sm font-medium text-teal-900">
+                        <p className="mb-1 text-sm font-medium text-foreground">
                             Your Connected Wallet
                         </p>
-                        <p className="break-all text-xs font-mono text-teal-700">
+                        <p className="break-all text-xs font-mono text-muted-foreground">
                             {address || 'Not connected'}
                         </p>
                         {address &&
                             contractOwner &&
                             address.toLowerCase() === contractOwner.toLowerCase() && (
-                                <p className="mt-2 text-xs font-medium text-green-600">
+                                <p className="mt-2 text-xs font-medium text-success">
                                     You are the contract owner and can authorize other wallets.
                                 </p>
                             )}
@@ -205,7 +205,7 @@ export function AuthorizeIssuer() {
                         variant="outline"
                         size="sm"
                         disabled={!address || isChecking}
-                        className="ml-2 border-teal-600 text-teal-600 hover:bg-teal-50"
+                        className="ml-2"
                     >
                         {isChecking ? 'Checking...' : 'Check Status'}
                     </Button>
@@ -215,15 +215,15 @@ export function AuthorizeIssuer() {
                     <div className="mt-3 flex items-center space-x-2">
                         {isAuthorized ? (
                             <>
-                                <CheckCircle2 className="h-5 w-5 text-green-600" />
-                                <span className="text-sm font-medium text-green-700">
+                                <CheckCircle2 className="h-5 w-5 text-success" />
+                                <span className="text-sm font-medium text-success">
                                     Authorized to issue credentials
                                 </span>
                             </>
                         ) : (
                             <>
-                                <Shield className="h-5 w-5 text-orange-600" />
-                                <span className="text-sm font-medium text-orange-700">
+                                <Shield className="h-5 w-5 text-warning" />
+                                <span className="text-sm font-medium text-warning">
                                     Not authorized - approval required
                                 </span>
                             </>
@@ -241,7 +241,7 @@ export function AuthorizeIssuer() {
                         value={walletToAuthorize}
                         onChange={(event) => setWalletToAuthorize(event.target.value)}
                     />
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                         Enter the Stellar public key (`G...`) that should be authorized to issue
                         credentials
                     </p>
@@ -256,7 +256,7 @@ export function AuthorizeIssuer() {
                             !address ||
                             address.toLowerCase() !== contractOwner?.toLowerCase()
                         }
-                        className="flex-1 bg-linear-to-r from-teal-600 to-cyan-600 text-white hover:from-teal-700 hover:to-cyan-700"
+                        className="flex-1"
                     >
                         {isAuthorizing ? 'Authorizing...' : 'Authorize Wallet'}
                     </Button>
@@ -265,16 +265,15 @@ export function AuthorizeIssuer() {
                         onClick={() => checkAuthorization(walletToAuthorize)}
                         disabled={isChecking || !walletToAuthorize}
                         variant="outline"
-                        className="border-gray-300"
                     >
                         {isChecking ? 'Checking...' : 'Check Status'}
                     </Button>
                 </div>
             </div>
 
-            <div className="mt-6 rounded-lg bg-gray-50 p-4">
-                <h3 className="mb-2 text-sm font-semibold text-gray-900">Important:</h3>
-                <ul className="list-inside list-disc space-y-1 text-xs text-gray-600">
+            <div className="mt-6 rounded-lg border border-border bg-secondary/40 p-4">
+                <h3 className="mb-2 text-sm font-semibold text-foreground">Important:</h3>
+                <ul className="list-inside list-disc space-y-1 text-xs text-muted-foreground">
                     <li>
                         You must be the <strong>contract owner</strong> to authorize other wallets
                     </li>

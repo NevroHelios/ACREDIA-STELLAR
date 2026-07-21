@@ -4,7 +4,11 @@ import './globals.css';
 import { Providers } from '@/components/providers';
 import { Toaster } from '@/components/ui/sonner';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({
+    subsets: ['latin'],
+    display: 'swap',
+    variable: '--font-sans',
+});
 
 export const metadata: Metadata = {
     title: 'Acredia - Blockchain Academic Credentials',
@@ -25,8 +29,8 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en" suppressHydrationWarning>
-            <body className={inter.className} suppressHydrationWarning>
+        <html lang="en" className={inter.variable} suppressHydrationWarning>
+            <body className="font-sans antialiased" suppressHydrationWarning>
                 <Providers>
                     {children}
                     <Toaster position="top-right" />
