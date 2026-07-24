@@ -27,6 +27,27 @@ const DUMMY_SOURCE = CONTRACT_ID;
 
 const server = new rpc.Server(RPC_URL);
 
+export class ContractConfigurationError extends Error {
+    constructor(message: string = 'Missing contract configuration') {
+        super(message);
+        this.name = 'ContractConfigurationError';
+    }
+}
+
+export class BlockchainUnavailableError extends Error {
+    constructor(message: string = 'Blockchain verification unavailable') {
+        super(message);
+        this.name = 'BlockchainUnavailableError';
+    }
+}
+
+export class CredentialNotFoundError extends Error {
+    constructor(message: string = 'Credential not found on chain') {
+        super(message);
+        this.name = 'CredentialNotFoundError';
+    }
+}
+
 export interface OnChainCredential {
     token_id?: bigint | number;
     student: string;
@@ -38,32 +59,62 @@ export interface OnChainCredential {
 }
 
 async function simulate(method: string, args: xdr.ScVal[]): Promise<unknown> {
-    if (!CONTRACT_ID) throw new Error('CONTRACT_ID not configured');
+    if (!CONTRACT_ID) {
+        throw new ContractConfigurationError('Missing contract configuration: CONTRACT_ID not configured');
+    }
 
     const contract = new Contract(CONTRACT_ID);
     // Use a dummy Account with sequence "0" — valid for read-only simulation
     const source = new Account(DUMMY_SOURCE, '0');
 
-    const tx = new TransactionBuilder(source, {
-        fee: '100',
-        networkPassphrase: NETWORK_PASSPHRASE,
-    })
-        .addOperation(contract.call(method, ...args))
-        .setTimeout(TimeoutInfinite)
-        .build();
-    const sim = await server.simulateTransaction(tx as never);
+    let sim;
+    try {
+        const tx = new TransactionBuilder(source, {
+            fee: '100',
+            networkPassphrase: NETWORK_PASSPHRASE,
+        })
+            .addOperation(contract.call(method, ...args))
+            .setTimeout(TimeoutInfinite)
+            .build();
+        sim = await server.simulateTransaction(tx as never);
+    } catch (error) {
+        throw new BlockchainUnavailableError(
+            `RPC error during simulation of ${method}: ${error instanceof Error ? error.message : String(error)}`
+        );
+    }
 
     if ('error' in sim) {
-        throw new Error(`Simulation error (${method}): ${(sim as { error: string }).error}`);
+        const errStr = String((sim as { error: string }).error);
+        if (
+            errStr.includes('CredentialNotFound') ||
+            errStr.includes('ContractError(4)') ||
+            errStr.includes('Codes(4)') ||
+            errStr.includes('Error(Contract, 4)')
+        ) {
+            throw new CredentialNotFoundError(errStr);
+        }
+        throw new BlockchainUnavailableError(`Simulation error (${method}): ${errStr}`);
     }
     const retval = (sim as { result?: { retval?: unknown } }).result?.retval;
     if (retval === undefined || retval === null) return null;
 
     // retval may be an xdr.ScVal object or a base64 string depending on SDK version
     if (typeof retval === 'string') {
-        return scValToNative(xdr.ScVal.fromXDR(retval, 'base64'));
+        try {
+            return scValToNative(xdr.ScVal.fromXDR(retval, 'base64'));
+        } catch (error) {
+            throw new BlockchainUnavailableError(
+                `Failed to decode return value of ${method}: ${error instanceof Error ? error.message : String(error)}`
+            );
+        }
     }
-    return scValToNative(retval as xdr.ScVal);
+    try {
+        return scValToNative(retval as xdr.ScVal);
+    } catch (error) {
+        throw new BlockchainUnavailableError(
+            `Failed to decode return value of ${method}: ${error instanceof Error ? error.message : String(error)}`
+        );
+    }
 }
 
 function nativeStructToRecord(value: unknown): Record<string, unknown> | null {
@@ -124,8 +175,11 @@ export async function getCredential(tokenId: string | number): Promise<OnChainCr
             nativeToScVal(Number(tokenId), { type: 'u64' }),
         ]);
         return normalizeOnChainCredential(result);
-    } catch {
-        return null;
+    } catch (error) {
+        if (error instanceof CredentialNotFoundError) {
+            return null;
+        }
+        throw error;
     }
 }
 
@@ -137,8 +191,11 @@ export async function verifyCredentialByHash(hash: string): Promise<OnChainCrede
     try {
         const result = await simulate('verify_credential', [credentialHashHexToScVal(hash)]);
         return normalizeOnChainCredential(result);
-    } catch {
-        return null;
+    } catch (error) {
+        if (error instanceof CredentialNotFoundError) {
+            return null;
+        }
+        throw error;
     }
 }
 
@@ -151,8 +208,11 @@ export async function isRevoked(tokenId: string | number): Promise<boolean> {
             nativeToScVal(Number(tokenId), { type: 'u64' }),
         ]);
         return result === true;
-    } catch {
-        return false;
+    } catch (error) {
+        if (error instanceof CredentialNotFoundError) {
+            return false;
+        }
+        throw error;
     }
 }
 
@@ -162,7 +222,10 @@ export async function isAuthorizedIssuer(issuerAddress: string): Promise<boolean
             new Address(issuerAddress).toScVal(),
         ]);
         return result === true;
-    } catch {
-        return false;
+    } catch (error) {
+        if (error instanceof CredentialNotFoundError) {
+            return false;
+        }
+        throw error;
     }
 }

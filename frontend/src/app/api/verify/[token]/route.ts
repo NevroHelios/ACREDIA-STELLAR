@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/serverAuth';
-import { getCredential, isAuthorizedIssuer, isRevoked } from '@/lib/contractReads';
+import {
+    getCredential,
+    isAuthorizedIssuer,
+    isRevoked,
+    ContractConfigurationError,
+    BlockchainUnavailableError,
+} from '@/lib/contractReads';
 import { deriveCredentialHash } from '@/lib/credentialHash';
 import { enforceRateLimit } from '@/lib/rateLimit';
 import {
@@ -28,9 +34,7 @@ type ChainChecks = {
     notRevoked: boolean;
 };
 
-function getErrorMessage(error: unknown) {
-    return error instanceof Error ? error.message : String(error);
-}
+// Removed unused getErrorMessage
 
 function getMismatchReasons(checks: ChainChecks | null) {
     if (!checks) {
@@ -183,7 +187,7 @@ export async function GET(
             getCredential(data.token_id),
             isRevoked(data.token_id),
             data.issuer_wallet_address && typeof isAuthorizedIssuer === 'function'
-                ? isAuthorizedIssuer(data.issuer_wallet_address).catch(() => false)
+                ? isAuthorizedIssuer(data.issuer_wallet_address)
                 : Promise.resolve(false),
         ]);
 
@@ -253,7 +257,6 @@ export async function GET(
             verification: {
                 verified,
                 revoked,
-                databaseMatch: true,
                 onChainMatch,
                 onChainFound: onChain !== null,
                 issuerAuthorized,
@@ -261,9 +264,7 @@ export async function GET(
             },
         });
     } catch (err: unknown) {
-        const message = getErrorMessage(err);
-
-        if (message.startsWith('Missing contract configuration')) {
+        if (err instanceof ContractConfigurationError) {
             await logVerificationAttempt(supabase, request, token, 'chain_unavailable', 500, {
                 credentialId,
                 errorCategory: 'contract_configuration',
@@ -275,10 +276,7 @@ export async function GET(
             );
         }
 
-        if (
-            message.startsWith('Contract simulation error') ||
-            message.startsWith('Failed to decode')
-        ) {
+        if (err instanceof BlockchainUnavailableError) {
             await logVerificationAttempt(supabase, request, token, 'chain_unavailable', 503, {
                 credentialId,
                 errorCategory: 'contract_read_failed',
