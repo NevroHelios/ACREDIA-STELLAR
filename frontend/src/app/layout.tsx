@@ -13,6 +13,18 @@ const inter = Inter({
 export const metadata: Metadata = {
     title: 'Acredia - Blockchain Academic Credentials',
     description: 'Secure, tamper-proof academic credentials powered by blockchain',
+    openGraph: {
+        title: 'Acredia - Blockchain Academic Credentials',
+        description: 'Secure, tamper-proof academic credentials powered by blockchain',
+        images: ['/logo.png'],
+        type: 'website',
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'Acredia - Blockchain Academic Credentials',
+        description: 'Secure, tamper-proof academic credentials powered by blockchain',
+        images: ['/logo.png'],
+    },
     // Favicon/icons are provided by the file-based conventions in this directory
     // (src/app/favicon.ico and src/app/icon.png), so the browser's default
     // `/favicon.ico` request resolves on every route — including error pages.
