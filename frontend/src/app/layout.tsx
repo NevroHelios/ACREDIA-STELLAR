@@ -3,16 +3,19 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/providers';
 import { Toaster } from '@/components/ui/sonner';
-import { ThemeProvider } from 'next-themes';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({
+    subsets: ['latin'],
+    display: 'swap',
+    variable: '--font-sans',
+});
 
 export const metadata: Metadata = {
     title: 'Acredia - Blockchain Academic Credentials',
     description: 'Secure, tamper-proof academic credentials powered by blockchain',
-    icons: {
-        icon: '/Acredia.png',
-    },
+    // Favicon/icons are provided by the file-based conventions in this directory
+    // (src/app/favicon.ico and src/app/icon.png), so the browser's default
+    // `/favicon.ico` request resolves on every route — including error pages.
 };
 
 export const viewport: Viewport = {
@@ -26,14 +29,12 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en" suppressHydrationWarning>
-            <body className={inter.className} suppressHydrationWarning>
-                <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-                    <Providers>
-                        {children}
-                        <Toaster position="top-right" />
-                    </Providers>
-                </ThemeProvider>
+        <html lang="en" className={inter.variable} suppressHydrationWarning>
+            <body className="font-sans antialiased" suppressHydrationWarning>
+                <Providers>
+                    {children}
+                    <Toaster position="top-right" />
+                </Providers>
             </body>
         </html>
     );

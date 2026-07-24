@@ -182,9 +182,9 @@ const res = await fetch(`/api/institution/credentials?${params}`, {
     // ── Loading skeleton ───────────────────────────────────────────────────────
     if (isLoading) {
         return (
-            <Card className="p-6 bg-white border-gray-200 shadow-lg">
+            <Card className="p-6">
                 <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900">Issued Credentials</h2>
+                    <h2 className="text-2xl font-bold text-foreground">Issued Credentials</h2>
                     <Skeleton className="h-9 w-24" />
                 </div>
                 
@@ -209,11 +209,11 @@ const res = await fetch(`/api/institution/credentials?${params}`, {
 
     if (error) {
         return (
-            <Card className="p-8 bg-white border-gray-200 shadow-lg">
+            <Card className="p-8">
                 <div className="flex flex-col items-center justify-center space-y-4">
-                    <AlertCircle className="h-12 w-12 text-red-500" />
-                    <p className="text-red-600">{error}</p>
-                    <Button onClick={loadCredentials} variant="outline" className="border-teal-600 text-teal-600 hover:bg-teal-50">
+                    <AlertCircle className="h-12 w-12 text-destructive" />
+                    <p className="text-destructive">{error}</p>
+                    <Button onClick={loadCredentials} variant="outline">
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Retry
                     </Button>
@@ -223,10 +223,10 @@ const res = await fetch(`/api/institution/credentials?${params}`, {
     }
 
     return (
-        <Card className="p-6 bg-white border-gray-200 shadow-lg">
+        <Card className="p-6">
             <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Issued Credentials</h2>
-                <Button onClick={loadCredentials} variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:bg-gray-100">
+                <h2 className="text-2xl font-bold text-foreground">Issued Credentials</h2>
+                <Button onClick={loadCredentials} variant="outline" size="sm" className="border-border text-foreground hover:bg-secondary">
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Refresh
                 </Button>
@@ -235,7 +235,7 @@ const res = await fetch(`/api/institution/credentials?${params}`, {
             {/* Filters */}
             <div className="flex flex-wrap gap-3 mb-6">
                 <div className="relative flex-1 min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         key={search}
                         placeholder="Search by name, degree, token ID..."
@@ -251,7 +251,7 @@ const res = await fetch(`/api/institution/credentials?${params}`, {
                 <select
                     value={status}
                     onChange={e => updateParams({ status: e.target.value })}
-                    className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                    className="border border-border rounded-md px-3 py-2 text-sm bg-card text-foreground"
                 >
                     <option value="all">All statuses</option>
                     <option value="active">Active</option>
@@ -261,20 +261,20 @@ const res = await fetch(`/api/institution/credentials?${params}`, {
                     type="date"
                     value={dateFrom}
                     onChange={e => updateParams({ dateFrom: e.target.value })}
-                    className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    className="border border-border rounded-md px-3 py-2 text-sm"
                 />
                 <input
                     type="date"
                     value={dateTo}
                     onChange={e => updateParams({ dateTo: e.target.value })}
-                    className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    className="border border-border rounded-md px-3 py-2 text-sm"
                 />
                 {(search || status !== 'all' || dateFrom || dateTo) && (
                     <Button
                         variant="outline"
                         size="sm"
                         onClick={() => router.replace(pathname)}
-                        className="text-gray-500"
+                        className="text-muted-foreground"
                     >
                         Clear filters
                     </Button>
@@ -287,31 +287,31 @@ const res = await fetch(`/api/institution/credentials?${params}`, {
                 role="region"
                 aria-label="Credential statistics"
             >
-                <div className="bg-teal-50 rounded-lg p-4">
-                    <p className="text-sm text-teal-700 font-medium">Showing</p>
-                    <p className="text-3xl font-bold text-teal-900">{total}</p>
+                <div className="rounded-xl border border-border bg-secondary/40 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Showing</p>
+                    <p className="mt-1 text-2xl font-bold text-foreground">{total}</p>
                 </div>
-                <div className="bg-green-50 rounded-lg p-4">
-                    <p className="text-sm text-green-700 font-medium">Page</p>
-                    <p className="text-3xl font-bold text-green-900">{page} of {totalPages || 1}</p>
+                <div className="rounded-xl border border-border bg-secondary/40 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Page</p>
+                    <p className="mt-1 text-2xl font-bold text-foreground">{page} of {totalPages || 1}</p>
                 </div>
-                <div className="bg-blue-50 rounded-lg p-4">
-                    <p className="text-sm text-blue-700 font-medium">Per page</p>
-                    <p className="text-3xl font-bold text-blue-900">{PAGE_SIZE}</p>
+                <div className="rounded-xl border border-border bg-secondary/40 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Per page</p>
+                    <p className="mt-1 text-2xl font-bold text-foreground">{PAGE_SIZE}</p>
                 </div>
             </div>
 
             {/* Empty state */}
             {credentials.length === 0 ? (
                 <div className="text-center py-12">
-                    <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500 text-lg">
+                    <FileText className="h-16 w-16 text-muted-foreground/40 mx-auto mb-4" />
+                    <p className="text-muted-foreground text-lg">
                         {search || status !== 'all' || dateFrom || dateTo
                             ? 'No credentials match your filters'
                             : 'No credentials issued yet'}
                     </p>
                     {(search || status !== 'all' || dateFrom || dateTo) && (
-                        <Button onClick={() => router.replace(pathname)} variant="link" className="mt-2 text-teal-600">
+                        <Button onClick={() => router.replace(pathname)} variant="link" className="mt-2">
                             Clear filters
                         </Button>
                     )}
@@ -339,7 +339,7 @@ const res = await fetch(`/api/institution/credentials?${params}`, {
                     >
                         ← Prev
                     </Button>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-muted-foreground">
                         Page {page} of {totalPages}
                     </span>
                     <Button
@@ -366,7 +366,7 @@ const res = await fetch(`/api/institution/credentials?${params}`, {
                     </DialogHeader>
                     {credentialToRevoke && (
                         <div className="py-4 space-y-4">
-                            <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                            <div className="bg-secondary/40 rounded-lg p-4 space-y-2">
                                 <p className="text-sm">
                                     <span className="font-medium">Student:</span>{' '}
                                     {credentialToRevoke.metadata?.credentialData?.studentName ||
@@ -382,10 +382,10 @@ const res = await fetch(`/api/institution/credentials?${params}`, {
                                     {credentialToRevoke.token_id}
                                 </p>
                             </div>
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                            <div className="border border-warning/25 bg-warning/8 rounded-lg p-3">
                                 <div className="flex items-start space-x-2">
-                                    <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                                    <div className="text-sm text-yellow-800">
+                                    <AlertCircle className="h-5 w-5 text-warning mt-0.5 flex-shrink-0" />
+                                    <div className="text-sm text-foreground">
                                         <p className="font-medium mb-1">Important:</p>
                                         <p>
                                             You must use the same wallet that issued this
@@ -431,30 +431,30 @@ function CredentialCard({
         : null;
 
     return (
-        <div className="border border-gray-200 rounded-lg p-4 hover:border-teal-500 transition-colors">
+        <div className="border border-border rounded-xl p-5 transition-all hover:border-primary/30 hover:shadow-sm">
             <div className="flex items-start justify-between">
                 <div className="flex-1 space-y-3">
                     <div className="flex items-center space-x-3">
-                        <Award className="h-5 w-5 text-teal-600" />
-                        <h3 className="font-semibold text-gray-900">{metadata.credentialType || 'Credential'}</h3>
+                        <Award className="h-5 w-5 text-primary" />
+                        <h3 className="font-semibold text-foreground">{metadata.credentialType || 'Credential'}</h3>
                         {credential.revoked ? (
                             <Badge variant="destructive">Revoked</Badge>
                         ) : (
-                            <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
+                            <Badge className="border-success/25 bg-success/10 text-success">Active</Badge>
                         )}
                     </div>
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                         <User className="h-4 w-4" />
                         <span className="font-medium">Student:</span>
                         <span>{metadata.studentName || 'Unknown'}</span>
                     </div>
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                         <FileText className="h-4 w-4" />
                         <span className="font-medium">Degree:</span>
                         <span>{metadata.degree || 'N/A'}</span>
-                        {metadata.major && <span className="text-gray-500">({metadata.major})</span>}
+                        {metadata.major && <span className="text-muted-foreground">({metadata.major})</span>}
                     </div>
-                    <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                         {metadata.gpa && <div><span className="font-medium">GPA:</span> {metadata.gpa}</div>}
                         <div className="flex items-center space-x-1">
                             <Calendar className="h-4 w-4" />
@@ -465,25 +465,25 @@ function CredentialCard({
                             </span>
                         </div>
                     </div>
-                    <div className="text-xs text-gray-500 font-mono">Token ID: {credential.token_id || 'Pending...'}</div>
+                    <div className="text-xs text-muted-foreground font-mono">Token ID: {credential.token_id || 'Pending...'}</div>
                 </div>
                 <div className="flex flex-col space-y-2">
                     {ipfsUrl && (
                         <a href={ipfsUrl} target="_blank" rel="noopener noreferrer">
-                            <Button variant="outline" size="sm" className="border-teal-600 text-teal-600 hover:bg-teal-50">
+                            <Button variant="outline" size="sm">
                                 <ExternalLink className="h-4 w-4 mr-1" />IPFS
                             </Button>
                         </a>
                     )}
                     {blockchainUrl && (
                         <a href={blockchainUrl} target="_blank" rel="noopener noreferrer">
-                            <Button variant="outline" size="sm" className="border-cyan-600 text-cyan-600 hover:bg-cyan-50">
+                            <Button variant="outline" size="sm">
                                 <ExternalLink className="h-4 w-4 mr-1" />Txn
                             </Button>
                         </a>
                     )}
                     {!credential.revoked && (
-                        <Button variant="outline" size="sm" className="border-red-600 text-red-600 hover:bg-red-50" onClick={() => onRevoke(credential)}>
+                        <Button variant="outline" size="sm" className="border-destructive/40 text-destructive hover:bg-destructive/8" onClick={() => onRevoke(credential)}>
                             <XCircle className="h-4 w-4 mr-1" />Revoke
                         </Button>
                     )}

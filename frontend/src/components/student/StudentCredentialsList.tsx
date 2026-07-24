@@ -178,9 +178,9 @@ export default function StudentCredentialsList({
     // ── Loading skeleton ───────────────────────────────────────────────────────
     if (loading) {
         return (
-            <Card className="border-gray-200 bg-white p-6 shadow-lg">
+            <Card className="p-6">
                 <div className="mb-6 flex items-center justify-between">
-                    <h2 className="text-2xl font-bold text-gray-900">My Credentials</h2>
+                    <h2 className="text-2xl font-bold text-foreground">My Credentials</h2>
                     <Skeleton className="h-9 w-24" />
                 </div>
                 
@@ -205,11 +205,11 @@ export default function StudentCredentialsList({
 
     if (error) {
         return (
-            <Card className="border-gray-200 bg-white p-8 shadow-lg">
+            <Card className="p-8">
                 <div className="flex flex-col items-center justify-center space-y-4">
-                    <AlertCircle className="h-12 w-12 text-red-500" />
-                    <p className="text-red-600">{error}</p>
-                    <Button onClick={loadCredentials} variant="outline" className="border-teal-600 text-teal-600 hover:bg-teal-50">
+                    <AlertCircle className="h-12 w-12 text-destructive" />
+                    <p className="text-destructive">{error}</p>
+                    <Button onClick={loadCredentials} variant="outline">
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Retry
                     </Button>
@@ -219,10 +219,10 @@ export default function StudentCredentialsList({
     }
 
     return (
-        <Card className="border-gray-200 bg-white p-6 shadow-lg">
+        <Card className="p-6">
             <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900">My Credentials</h2>
-                <Button onClick={loadCredentials} variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:bg-gray-100">
+                <h2 className="text-2xl font-bold text-foreground">My Credentials</h2>
+                <Button onClick={loadCredentials} variant="outline" size="sm" className="border-border text-foreground hover:bg-secondary">
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Refresh
                 </Button>
@@ -231,7 +231,7 @@ export default function StudentCredentialsList({
             {/* Filters */}
             <div className="flex flex-wrap gap-3 mb-6">
                 <div className="relative flex-1 min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                         key={search}
                         placeholder="Search by type, degree, institution..."
@@ -247,7 +247,7 @@ export default function StudentCredentialsList({
                 <select
                     value={status}
                     onChange={e => updateParams({ status: e.target.value })}
-                    className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                    className="border border-border rounded-md px-3 py-2 text-sm bg-card text-foreground"
                 >
                     <option value="all">All statuses</option>
                     <option value="active">Active</option>
@@ -257,16 +257,16 @@ export default function StudentCredentialsList({
                     type="date"
                     value={dateFrom}
                     onChange={e => updateParams({ dateFrom: e.target.value })}
-                    className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    className="border border-border rounded-md px-3 py-2 text-sm"
                 />
                 <input
                     type="date"
                     value={dateTo}
                     onChange={e => updateParams({ dateTo: e.target.value })}
-                    className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    className="border border-border rounded-md px-3 py-2 text-sm"
                 />
                 {(search || status !== 'all' || dateFrom || dateTo) && (
-                    <Button variant="outline" size="sm" onClick={() => router.replace(pathname)} className="text-gray-500">
+                    <Button variant="outline" size="sm" onClick={() => router.replace(pathname)} className="text-muted-foreground">
                         Clear filters
                     </Button>
                 )}
@@ -277,31 +277,31 @@ export default function StudentCredentialsList({
                 role="region"
                 aria-label="Credential statistics"
             >
-                <div className="rounded-lg bg-teal-50 p-4">
-                    <p className="text-sm font-medium text-teal-700">Total</p>
-                    <p className="text-3xl font-bold text-teal-900">{total}</p>
+                <div className="rounded-xl border border-border bg-secondary/40 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</p>
+                    <p className="mt-1 text-2xl font-bold text-foreground">{total}</p>
                 </div>
-                <div className="rounded-lg bg-green-50 p-4">
-                    <p className="text-sm font-medium text-green-700">Page</p>
-                    <p className="text-3xl font-bold text-green-900">{page} of {totalPages || 1}</p>
+                <div className="rounded-xl border border-border bg-secondary/40 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Page</p>
+                    <p className="mt-1 text-2xl font-bold text-foreground">{page} of {totalPages || 1}</p>
                 </div>
-                <div className="rounded-lg bg-blue-50 p-4">
-                    <p className="text-sm font-medium text-blue-700">Per page</p>
-                    <p className="text-3xl font-bold text-blue-900">{PAGE_SIZE}</p>
+                <div className="rounded-xl border border-border bg-secondary/40 p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Per page</p>
+                    <p className="mt-1 text-2xl font-bold text-foreground">{PAGE_SIZE}</p>
                 </div>
             </div>
 
             {/* Empty state */}
             {credentials.length === 0 ? (
                 <div className="py-12 text-center">
-                    <Award className="mx-auto mb-4 h-16 w-16 text-gray-300" />
-                    <p className="text-lg text-gray-500">
+                    <Award className="mx-auto mb-4 h-16 w-16 text-muted-foreground/40" />
+                    <p className="text-lg text-muted-foreground">
                         {search || status !== 'all' || dateFrom || dateTo
                             ? 'No credentials match your filters'
                             : 'No credentials issued yet'}
                     </p>
                     {(search || status !== 'all' || dateFrom || dateTo) && (
-                        <Button onClick={() => router.replace(pathname)} variant="link" className="mt-2 text-teal-600">
+                        <Button onClick={() => router.replace(pathname)} variant="link" className="mt-2">
                             Clear filters
                         </Button>
                     )}
@@ -325,7 +325,7 @@ export default function StudentCredentialsList({
                     >
                         ← Prev
                     </Button>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-muted-foreground">
                         Page {page} of {totalPages}
                     </span>
                     <Button
@@ -360,22 +360,22 @@ function CredentialCard({ credential }: { credential: Credential }) {
     return (
         <>
             <QRCodeModal open={showQRModal} onClose={() => setShowQRModal(false)} credential={credential} />
-            <div className="rounded-lg border border-gray-200 p-4 transition-colors hover:border-teal-500">
+            <div className="rounded-xl border border-border p-5 transition-all hover:border-primary/30 hover:shadow-sm">
                 <div className="flex items-start justify-between">
                     <div className="flex-1 space-y-3">
                         <div className="flex items-center space-x-3">
-                            <Award className="h-5 w-5 text-teal-600" />
-                            <h3 className="font-semibold text-gray-900">{metadata.credentialType || 'Credential'}</h3>
+                            <Award className="h-5 w-5 text-primary" />
+                            <h3 className="font-semibold text-foreground">{metadata.credentialType || 'Credential'}</h3>
                             {credential.revoked ? (
                                 <Badge variant="destructive">Revoked</Badge>
                             ) : (
-                                <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
+                                <Badge className="border-success/25 bg-success/10 text-success">Active</Badge>
                             )}
                         </div>
                         <div className="grid grid-cols-2 gap-3 text-sm">
                             {metadata.degree && (
                                 <div className="flex items-center space-x-2">
-                                    <GraduationCap className="h-4 w-4 text-gray-500" />
+                                    <GraduationCap className="h-4 w-4 text-muted-foreground" />
                                     <span>
                                         <span className="font-medium">Degree:</span>{' '}
                                         {metadata.degree}
@@ -391,12 +391,9 @@ function CredentialCard({ credential }: { credential: Credential }) {
                                 <div>
                                     <span className="font-medium">GPA:</span> {metadata.gpa}
                                 </div>
-                            )}
-                            {metadata.major && <div><span className="font-medium">Major:</span> {metadata.major}</div>}
-                            {metadata.gpa   && <div><span className="font-medium">GPA:</span> {metadata.gpa}</div>}
-                            {metadata.institutionName && (
+                            )}                            {metadata.institutionName && (
                                 <div className="flex items-center space-x-2">
-                                    <Building2 className="h-4 w-4 text-gray-500" />
+                                    <Building2 className="h-4 w-4 text-muted-foreground" />
                                     <span>{metadata.institutionName}</span>
                                 </div>
                             )}
@@ -409,25 +406,25 @@ function CredentialCard({ credential }: { credential: Credential }) {
                                 </span>
                             </div>
                         </div>
-                        <div className="font-mono text-xs text-gray-500">Token ID: {credential.token_id || 'Pending...'}</div>
+                        <div className="font-mono text-xs text-muted-foreground">Token ID: {credential.token_id || 'Pending...'}</div>
                     </div>
                     <div className="ml-4 flex flex-col space-y-2">
-                        <Button onClick={() => setShowQRModal(true)} variant="outline" size="sm" className="border-teal-600 text-teal-600 hover:bg-teal-50">
+                        <Button onClick={() => setShowQRModal(true)} variant="outline" size="sm">
                             <QrCode className="mr-1 h-4 w-4" />QR Code
                         </Button>
-                        <Button onClick={handleShare} variant="outline" size="sm" className="border-blue-600 text-blue-600 hover:bg-blue-50">
+                        <Button onClick={handleShare} variant="outline" size="sm">
                             <Share2 className="mr-1 h-4 w-4" />Share
                         </Button>
                         {ipfsUrl && (
                             <a href={ipfsUrl} target="_blank" rel="noopener noreferrer">
-                                <Button variant="outline" size="sm" className="w-full border-purple-600 text-purple-600 hover:bg-purple-50">
+                                <Button variant="outline" size="sm" className="w-full">
                                     <ExternalLink className="mr-1 h-4 w-4" />IPFS
                                 </Button>
                             </a>
                         )}
                         {blockchainUrl && (
                             <a href={blockchainUrl} target="_blank" rel="noopener noreferrer">
-                                <Button variant="outline" size="sm" className="w-full border-cyan-600 text-cyan-600 hover:bg-cyan-50">
+                                <Button variant="outline" size="sm" className="w-full">
                                     <ExternalLink className="mr-1 h-4 w-4" />Blockchain
                                 </Button>
                             </a>

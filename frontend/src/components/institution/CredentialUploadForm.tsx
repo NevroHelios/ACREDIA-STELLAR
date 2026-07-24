@@ -271,14 +271,14 @@ export function CredentialUploadForm({
     };
 
     return (
-        <Card className="p-6 bg-white border-gray-200 shadow-lg">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Issue New Credential</h2>
+        <Card className="p-6 sm:p-8">
+            <h2 className="mb-6 text-xl font-bold text-foreground">Issue new credential</h2>
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 {validationErrors.length > 0 && (
-                    <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                    <div className="rounded-lg border border-destructive/25 bg-destructive/8 p-3">
                         {validationErrors.map((error) => (
-                            <p key={error} className="text-sm text-red-700">
+                            <p key={error} className="text-sm text-destructive">
                                 {error}
                             </p>
                         ))}
@@ -312,10 +312,10 @@ export function CredentialUploadForm({
                                 return (
                                     <div
                                         key={step.key}
-                                        className={`rounded-lg border p-2 text-xs ${
+                                        className={`rounded-lg border p-2 text-xs font-medium ${
                                             isComplete || isActive
-                                                ? 'border-teal-200 bg-teal-50 text-teal-700'
-                                                : 'border-gray-200 bg-gray-50 text-gray-500'
+                                                ? 'border-primary/25 bg-primary/8 text-primary'
+                                                : 'border-border bg-secondary text-muted-foreground'
                                         }`}
                                     >
                                         {isComplete
@@ -332,7 +332,7 @@ export function CredentialUploadForm({
                     <Button
                         type="submit"
                         disabled={isSubmitting || !selectedFile}
-                        className="w-full bg-linear-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white"
+                        className="w-full "
                     >
                         {isSubmitting ? (
                             <>
@@ -358,45 +358,45 @@ export function CredentialUploadForm({
                     <div className="space-y-3 text-sm">
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <p className="text-gray-500">Student</p>
-                                <p className="font-medium text-gray-900">
+                                <p className="text-muted-foreground">Student</p>
+                                <p className="font-medium text-foreground">
                                     {formData.studentName || 'N/A'}
                                 </p>
                             </div>
                             <div>
-                                <p className="text-gray-500">Credential</p>
-                                <p className="font-medium text-gray-900">
+                                <p className="text-muted-foreground">Credential</p>
+                                <p className="font-medium text-foreground">
                                     {formData.credentialType}
                                 </p>
                             </div>
                             <div>
-                                <p className="text-gray-500">Degree</p>
-                                <p className="font-medium text-gray-900">
+                                <p className="text-muted-foreground">Degree</p>
+                                <p className="font-medium text-foreground">
                                     {formData.degree || 'N/A'}
                                 </p>
                             </div>
                             <div>
-                                <p className="text-gray-500">Issue Date</p>
-                                <p className="font-medium text-gray-900">
+                                <p className="text-muted-foreground">Issue Date</p>
+                                <p className="font-medium text-foreground">
                                     {formData.issueDate || 'N/A'}
                                 </p>
                             </div>
                         </div>
                         <div>
-                            <p className="text-gray-500">Student Wallet</p>
-                            <p className="break-all font-medium text-gray-900">
+                            <p className="text-muted-foreground">Student Wallet</p>
+                            <p className="break-all font-medium text-foreground">
                                 {formData.studentWallet || 'N/A'}
                             </p>
                         </div>
                         <div>
-                            <p className="text-gray-500">Document</p>
-                            <p className="font-medium text-gray-900">
+                            <p className="text-muted-foreground">Document</p>
+                            <p className="font-medium text-foreground">
                                 {selectedFile?.name || 'N/A'}
                             </p>
                         </div>
                         <div>
-                            <p className="text-gray-500">Subjects</p>
-                            <p className="font-medium text-gray-900">
+                            <p className="text-muted-foreground">Subjects</p>
+                            <p className="font-medium text-foreground">
                                 {getActiveSubjects().length}
                             </p>
                         </div>
@@ -415,7 +415,7 @@ export function CredentialUploadForm({
                             type="button"
                             onClick={handleConfirmIssue}
                             disabled={isSubmitting}
-                            className="bg-linear-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white"
+                            className=""
                         >
                             {isSubmitting ? (
                                 <>

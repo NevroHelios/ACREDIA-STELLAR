@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { List, Shield, Upload, User, Wallet } from 'lucide-react';
+import { ArrowRight, List, Shield, Upload, User, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { CredentialUploadForm } from '@/components/institution/CredentialUploadForm';
@@ -16,6 +16,45 @@ import { debugLog, debugWarn, captureException } from '@/lib/debug';
 import { safeGetSession, supabase } from '@/lib/supabase';
 import { useStellarAccount } from '@/contexts/StellarContext';
 import { ProtectedRoute, useAuth } from '@/contexts/AuthContext';
+
+function InfoField({ label, children }: { label: string; children: ReactNode }) {
+    return (
+        <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {label}
+            </p>
+            <p className="mt-1 font-medium text-foreground">{children}</p>
+        </div>
+    );
+}
+
+function WalletStatus({ address, linking }: { address: string | null; linking?: boolean }) {
+    if (!address) {
+        return <span className="text-warning">Not connected</span>;
+    }
+    return (
+        <span className="inline-flex items-center gap-2 text-success">
+            <span className="flex h-2 w-2 rounded-full bg-success" />
+            {linking ? 'Linking' : 'Connected'}: {address.slice(0, 6)}…{address.slice(-4)}
+        </span>
+    );
+}
+
+function WalletPromptCard({ message }: { message: string }) {
+    return (
+        <Card className="border-warning/25 bg-warning/8 p-6">
+            <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/15 text-warning">
+                    <Wallet className="h-5 w-5" />
+                </span>
+                <div>
+                    <h3 className="text-base font-semibold text-foreground">Connect your wallet</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{message}</p>
+                </div>
+            </div>
+        </Card>
+    );
+}
 
 function DashboardContent() {
     const { user, userRole, signOut } = useAuth();
@@ -174,92 +213,62 @@ function DashboardContent() {
     return (
         <DashboardShell
             title={<>Welcome, {user?.user_metadata?.name || 'User'}</>}
-            subtitle={<span className="capitalize">{userRole} Dashboard</span>}
+            subtitle={<span className="capitalize">{userRole} dashboard</span>}
+            brandBadge={
+                userRole && userRole !== 'loading' ? String(userRole).toUpperCase() : undefined
+            }
             onSignOut={handleSignOut}
         >
             {userRole === 'institution' && (
                 <div className="space-y-6">
                     {loadingInstitution && (
-                        <Card className="border-gray-200 bg-white p-6 shadow-lg">
-                            <Skeleton className="h-7 w-48 mb-4" />
+                        <Card className="p-6">
+                            <Skeleton className="mb-4 h-7 w-48" />
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                                <div className="space-y-2">
-                                    <Skeleton className="h-4 w-16" />
-                                    <Skeleton className="h-5 w-32" />
-                                </div>
-                                <div className="space-y-2">
-                                    <Skeleton className="h-4 w-16" />
-                                    <Skeleton className="h-5 w-24" />
-                                </div>
-                                <div className="space-y-2">
-                                    <Skeleton className="h-4 w-24" />
-                                    <Skeleton className="h-5 w-40" />
-                                </div>
+                                {[0, 1, 2].map((i) => (
+                                    <div key={i} className="space-y-2">
+                                        <Skeleton className="h-4 w-16" />
+                                        <Skeleton className="h-5 w-32" />
+                                    </div>
+                                ))}
                             </div>
                         </Card>
                     )}
 
                     {institutionId && (
-                        <Card className="border-gray-200 bg-white p-6 shadow-lg">
-                            <h3 className="mb-4 text-xl font-bold text-gray-900">
-                                Account Information
+                        <Card className="p-6">
+                            <h3 className="mb-5 text-base font-semibold text-foreground">
+                                Account information
                             </h3>
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                                <div>
-                                    <p className="text-sm text-gray-500">Email</p>
-                                    <p className="font-medium text-gray-900">{user?.email}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-500">Role</p>
-                                    <p className="font-medium capitalize text-gray-900">
-                                        {userRole}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-500">Wallet Status</p>
-                                    <p className="font-medium text-gray-900">
-                                        {address ? (
-                                            <span className="text-teal-600">
-                                                {linkingInstitutionWallet ? 'Linking' : 'Connected'}:{' '}
-                                                {address.slice(0, 6)}...{address.slice(-4)}
-                                            </span>
-                                        ) : (
-                                            <span className="text-orange-600">Not Connected</span>
-                                        )}
-                                    </p>
-                                </div>
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                                <InfoField label="Email">{user?.email}</InfoField>
+                                <InfoField label="Role">
+                                    <span className="capitalize">{userRole}</span>
+                                </InfoField>
+                                <InfoField label="Wallet status">
+                                    <WalletStatus
+                                        address={address}
+                                        linking={linkingInstitutionWallet}
+                                    />
+                                </InfoField>
                             </div>
                         </Card>
                     )}
 
                     {institutionId && !address && (
-                        <Card className="border-orange-200 bg-orange-50 p-6">
-                            <div className="flex items-start space-x-3">
-                                <Wallet className="mt-1 h-6 w-6 text-orange-600" />
-                                <div>
-                                    <h3 className="mb-2 text-lg font-bold text-orange-900">
-                                        Connect Your Wallet
-                                    </h3>
-                                    <p className="mb-4 text-orange-800">
-                                        You need to connect your wallet to issue credentials on the
-                                        blockchain. Click the "Connect Wallet" button in the top
-                                        right corner.
-                                    </p>
-                                </div>
-                            </div>
-                        </Card>
+                        <WalletPromptCard message="Connect your wallet to issue credentials on the blockchain — use the “Connect Wallet” button in the top right." />
                     )}
 
                     {institutionId && (
                         <Tabs defaultValue="issue" className="w-full">
-                            <TabsList className="grid w-full max-w-2xl grid-cols-2">
-                                <TabsTrigger value="issue" className="flex items-center space-x-2">
+                            <TabsList className="grid w-full max-w-md grid-cols-2">
+                                <TabsTrigger value="issue" className="gap-2">
                                     <Upload className="h-4 w-4" />
-                                    <span>Issue Credential</span>
+                                    Issue credential
                                 </TabsTrigger>
-                                <TabsTrigger value="view" className="flex items-center space-x-2">
+                                <TabsTrigger value="view" className="gap-2">
                                     <List className="h-4 w-4" />
-                                    <span>View Issued</span>
+                                    View issued
                                 </TabsTrigger>
                             </TabsList>
 
@@ -286,46 +295,53 @@ function DashboardContent() {
 
             {userRole === 'admin' && (
                 <div className="space-y-6">
-                    <Card className="border-red-200 bg-gradient-to-br from-red-50 to-orange-50 p-8 shadow-lg">
-                        <div className="mb-6 flex items-center space-x-4">
-                            <div className="rounded-2xl bg-red-100 p-3">
-                                <Shield className="h-11 w-11 text-red-600" />
-                            </div>
+                    <Card className="p-8">
+                        <div className="flex items-center gap-4">
+                            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                                <Shield className="h-7 w-7" />
+                            </span>
                             <div>
-                                <h2 className="text-2xl font-bold text-gray-900">
-                                    You&apos;re an Admin
+                                <h2 className="text-xl font-bold text-foreground">
+                                    You&apos;re an admin
                                 </h2>
-                                <p className="text-gray-600">
-                                    Access the Admin Panel to manage institutions and authorize
+                                <p className="text-sm text-muted-foreground">
+                                    Access the admin panel to manage institutions and authorize
                                     issuers.
                                 </p>
                             </div>
                         </div>
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
                             <Link
                                 href="/admin"
-                                className="group block rounded-xl border border-red-200 bg-white p-6 transition-all hover:border-red-400 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+                                className="group block rounded-xl border border-border bg-card p-6 transition-all hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2"
                             >
-                                <Shield className="mb-3 h-11 w-11 text-red-600 transition-transform group-hover:scale-110" />
-                                <h3 className="mb-1 font-bold text-gray-900">
-                                    Admin Dashboard
-                                </h3>
-                                <p className="text-sm text-gray-600">
+                                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-105">
+                                    <Shield className="h-6 w-6" />
+                                </span>
+                                <h3 className="mt-4 font-semibold text-foreground">Admin dashboard</h3>
+                                <p className="mt-1 text-sm text-muted-foreground">
                                     Authorize institutions, view system stats, and manage the
                                     contract.
                                 </p>
-                                <span className="mt-2 inline-block text-xs font-semibold text-red-600">
-                                    Open Admin Panel -&gt;
+                                <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-primary">
+                                    Open admin panel
+                                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                                 </span>
                             </Link>
-                            <div className="rounded-xl border border-gray-200 bg-white p-6">
-                                <User className="mb-3 h-11 w-11 text-teal-600" />
-                                <h3 className="mb-1 font-bold text-gray-900">Connected Wallet</h3>
-                                <p className="mb-2 text-sm text-gray-500">Your Stellar address:</p>
-                                <p className="break-all text-xs font-mono text-gray-700">
+                            <div className="rounded-xl border border-border bg-card p-6">
+                                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gold/12 text-gold">
+                                    <User className="h-6 w-6" />
+                                </span>
+                                <h3 className="mt-4 font-semibold text-foreground">
+                                    Connected wallet
+                                </h3>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    Your Stellar address:
+                                </p>
+                                <p className="mt-2 break-all font-mono text-xs text-foreground">
                                     {address || (
-                                        <span className="text-orange-500">
-                                            Not connected - click "Connect Wallet" above
+                                        <span className="text-warning">
+                                            Not connected — click “Connect Wallet” above
                                         </span>
                                     )}
                                 </p>
@@ -337,53 +353,23 @@ function DashboardContent() {
 
             {userRole === 'student' && (
                 <div className="space-y-6">
-                    <Card className="border-gray-200 bg-white p-6 shadow-lg">
-                        <h3 className="mb-4 text-xl font-bold text-gray-900">
-                            Account Information
+                    <Card className="p-6">
+                        <h3 className="mb-5 text-base font-semibold text-foreground">
+                            Account information
                         </h3>
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                            <div>
-                                <p className="text-sm text-gray-500">Email</p>
-                                <p className="font-medium text-gray-900">{user?.email}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-500">Name</p>
-                                <p className="font-medium text-gray-900">
-                                    {user?.user_metadata?.name || 'Not set'}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-500">Wallet Status</p>
-                                <p className="font-medium text-gray-900">
-                                    {address ? (
-                                        <span className="text-teal-600">
-                                            Connected: {address.slice(0, 6)}...
-                                            {address.slice(-4)}
-                                        </span>
-                                    ) : (
-                                        <span className="text-orange-600">Not Connected</span>
-                                    )}
-                                </p>
-                            </div>
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                            <InfoField label="Email">{user?.email}</InfoField>
+                            <InfoField label="Name">
+                                {user?.user_metadata?.name || 'Not set'}
+                            </InfoField>
+                            <InfoField label="Wallet status">
+                                <WalletStatus address={address} />
+                            </InfoField>
                         </div>
                     </Card>
 
                     {!address && (
-                        <Card className="border-orange-200 bg-orange-50 p-6">
-                            <div className="flex items-start space-x-3">
-                                <Wallet className="mt-1 h-6 w-6 text-orange-600" />
-                                <div>
-                                    <h3 className="mb-2 text-lg font-bold text-orange-900">
-                                        Connect Your Wallet
-                                    </h3>
-                                    <p className="mb-4 text-orange-800">
-                                        You need to connect your wallet to view your credentials on
-                                        the blockchain. Click the "Connect Wallet" button in the top
-                                        right corner.
-                                    </p>
-                                </div>
-                            </div>
-                        </Card>
+                        <WalletPromptCard message="Connect your wallet to view your credentials on the blockchain — use the “Connect Wallet” button in the top right." />
                     )}
 
                     <StudentCredentialsList

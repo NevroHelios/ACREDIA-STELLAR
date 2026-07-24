@@ -65,7 +65,7 @@ export default function QRCodeModal({ open, onClose, credential }: QRCodeModalPr
                     margin: 2,
                     errorCorrectionLevel: 'H',
                     color: {
-                        dark: '#0F766E',
+                        dark: '#0A2540',
                         light: '#FFFFFF',
                     },
                 },
@@ -139,7 +139,7 @@ export default function QRCodeModal({ open, onClose, credential }: QRCodeModalPr
                 </DialogHeader>
 
                 <div className="space-y-4">
-                    <div className="flex justify-center rounded-lg border border-teal-200 bg-linear-to-br from-teal-50 to-white p-4">
+                    <div className="flex justify-center rounded-lg border border-border bg-secondary/40 p-4">
                         <canvas
                             ref={canvasRef}
                             width={240}
@@ -155,15 +155,15 @@ export default function QRCodeModal({ open, onClose, credential }: QRCodeModalPr
                         />
                     </div>
 
-                    <div className="flex flex-col gap-1 rounded-md bg-gray-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-                        <span className="text-xs text-gray-500">Token ID:</span>
-                        <span className="break-all text-sm font-mono font-semibold text-gray-900 sm:text-right">
+                    <div className="flex flex-col gap-1 rounded-md bg-secondary/40 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                        <span className="text-xs text-muted-foreground">Token ID:</span>
+                        <span className="break-all text-sm font-mono font-semibold text-foreground sm:text-right">
                             #{credential?.token_id || 'N/A'}
                         </span>
                     </div>
 
                     <div className="space-y-1.5">
-                        <label htmlFor="verification-link-input" className="text-xs font-medium text-gray-700">
+                        <label htmlFor="verification-link-input" className="text-xs font-medium text-foreground">
                             Verification Link
                         </label>
                         <div className="flex min-w-0 gap-2">
@@ -171,7 +171,7 @@ export default function QRCodeModal({ open, onClose, credential }: QRCodeModalPr
                                 id="verification-link-input"
                                 value={verificationUrl}
                                 readOnly
-                                className="h-9 min-w-0 truncate bg-white font-mono text-xs"
+                                className="h-9 min-w-0 truncate font-mono text-xs"
                             />
                             <Button
                                 onClick={handleCopyLink}
@@ -183,7 +183,7 @@ export default function QRCodeModal({ open, onClose, credential }: QRCodeModalPr
                                 }
                             >
                                 {copied ? (
-                                    <Check className="h-3.5 w-3.5 text-green-600" />
+                                    <Check className="h-3.5 w-3.5 text-success" />
                                 ) : (
                                     <Copy className="h-3.5 w-3.5" />
                                 )}
@@ -204,7 +204,7 @@ export default function QRCodeModal({ open, onClose, credential }: QRCodeModalPr
                         <Button
                             onClick={handleShare}
                             size="sm"
-                            className="h-9 flex-1 bg-teal-600 text-sm hover:bg-teal-700"
+                            className="h-9 flex-1 text-sm"
                         >
                             <Share2 className="mr-1.5 h-3.5 w-3.5" />
                             Share

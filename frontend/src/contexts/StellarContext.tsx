@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { isConnected, requestAccess, setAllowed } from '@stellar/freighter-api';
+import { getAddress, isAllowed, isConnected, requestAccess, setAllowed } from '@stellar/freighter-api';
 import { toast } from 'sonner';
 
 import { captureException } from '@/lib/debug';
@@ -27,29 +27,36 @@ export const StellarProvider = ({ children }: { children: React.ReactNode }) => 
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const checkConnection = async () => {
+        // Silently restore a previously-approved connection on load.
+        // IMPORTANT: never call requestAccess()/setAllowed() here — those open the
+        // Freighter extension popup, which must only happen on an explicit user
+        // action (the Connect button). We only read state the wallet already has.
+        const restoreConnection = async () => {
             try {
-                if (await isConnected()) {
-                    const access = await requestAccess();
-                    if (access && access.address) {
-                        setAddress(access.address);
-                        setError(null);
-                    }
+                const { isConnected: hasFreighter } = await isConnected();
+                if (!hasFreighter) return; // extension not installed
+
+                const { isAllowed: appAllowed } = await isAllowed();
+                if (!appAllowed) return; // user hasn't authorized this app yet — do not prompt
+
+                const { address } = await getAddress(); // no popup when already allowed
+                if (address) {
+                    setAddress(address);
+                    setError(null);
                 }
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            } catch (e) {
-                // Ignore silently, wallet just not unlocked/connected
+            } catch {
+                // Ignore silently: wallet locked, not installed, or not yet authorized.
             }
         };
-        checkConnection();
+        restoreConnection();
     }, []);
 
     const connect = async () => {
         setIsConnecting(true);
         setError(null);
         try {
-            const connected = await isConnected();
-            if (!connected) {
+            const { isConnected: hasFreighter } = await isConnected();
+            if (!hasFreighter) {
                 const msg = 'Freighter wallet not detected. Please install the browser extension!';
                 setError(msg);
                 toast.error(msg);
@@ -58,9 +65,12 @@ export const StellarProvider = ({ children }: { children: React.ReactNode }) => 
             }
 
             await setAllowed();
-            const access = await requestAccess();
-            if (access && access.address) {
-                setAddress(access.address);
+            const { address, error: accessError } = await requestAccess();
+            if (accessError) {
+                throw new Error(accessError.message ?? String(accessError));
+            }
+            if (address) {
+                setAddress(address);
                 setError(null);
                 toast.success('Wallet connected!');
             }

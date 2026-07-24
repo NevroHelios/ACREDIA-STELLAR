@@ -10,18 +10,18 @@ export function VerificationStateCard({ status, title, description }: Verificati
     const styles = {
         valid: {
             icon: CheckCircle2,
-            iconClassName: 'text-emerald-600',
-            wrapperClassName: 'border-emerald-200 bg-emerald-50',
+            iconClassName: 'text-success',
+            wrapperClassName: 'border-success/25 bg-success/10',
         },
         invalid: {
             icon: AlertCircle,
-            iconClassName: 'text-rose-600',
-            wrapperClassName: 'border-rose-200 bg-rose-50',
+            iconClassName: 'text-destructive',
+            wrapperClassName: 'border-destructive/25 bg-destructive/10',
         },
         revoked: {
             icon: ShieldCheck,
-            iconClassName: 'text-amber-600',
-            wrapperClassName: 'border-amber-200 bg-amber-50',
+            iconClassName: 'text-warning',
+            wrapperClassName: 'border-warning/25 bg-warning/10',
         },
     } as const;
 

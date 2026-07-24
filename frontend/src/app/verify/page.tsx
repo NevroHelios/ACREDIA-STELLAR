@@ -19,7 +19,6 @@ import {
     FileText,
     Hash,
     Home,
-    Info,
     Camera,
     ScanLine,
     RotateCcw,
@@ -27,10 +26,10 @@ import {
     Lock,
 } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { VerificationStateCard } from '@/components/verify/VerificationStateCard';
 import { VerificationSummary } from '@/components/verify/VerificationSummary';
 import { useCredentialVerification } from '@/hooks/useCredentialVerification';
+import { SiteNavbar } from '@/components/marketing/SiteNavbar';
 
 const QR_READER_ID = 'credential-qr-reader';
 
@@ -69,91 +68,54 @@ function VerifyContent() {
     // Show manual entry form if no token provided
     if (!tokenId && !loading && !credential) {
         return (
-            <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-teal-50">
-                {/* Navbar */}
-                <nav className="border-b border-gray-200 bg-white/90 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
-                    <div className="container mx-auto px-4 py-4">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <Link href="/" className="flex items-center space-x-3">
-                                <Image
-                                    src="/logo.png"
-                                    alt="Acredia Logo"
-                                    width={40}
-                                    height={40}
-                                    className="rounded-lg"
-                                />
-                                <div>
-                                    <span className="text-xl sm:text-2xl font-bold bg-linear-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
-                                        ACREDIA
-                                    </span>
-                                    <span className="ml-2 text-xs bg-blue-600 text-white px-2 py-1 rounded-full font-semibold">
-                                        VERIFY
-                                    </span>
-                                </div>
-                            </Link>
-                            <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap sm:space-x-4">
-                                <Link href="/">
-                                    <Button variant="ghost" size="sm">
-                                        <Home className="h-4 w-4 mr-2" />
-                                        Home
-                                    </Button>
-                                </Link>
-                                <Link href="/about">
-                                    <Button variant="ghost" size="sm">
-                                        <Info className="h-4 w-4 mr-2" />
-                                        About
-                                    </Button>
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
-                </nav>
+            <div className="min-h-screen bg-secondary/30">
+                <SiteNavbar />
 
                 {/* Hero Section */}
                 <div className="container mx-auto px-4 py-12">
                     <div className="max-w-4xl mx-auto">
                         {/* Info Cards */}
                         <div className="grid md:grid-cols-3 gap-4 mb-8">
-                            <Card className="p-4 bg-white/80 backdrop-blur border-blue-200">
+                            <Card className="p-4 bg-card/80 backdrop-blur border-primary/20">
                                 <div className="flex items-center space-x-3">
-                                    <div className="rounded-full bg-blue-100 p-3">
-                                        <Shield className="h-6 w-6 text-blue-600" />
+                                    <div className="rounded-full bg-primary/10 p-3">
+                                        <Shield className="h-6 w-6 text-primary" />
                                     </div>
                                     <div>
-                                        <h3 className="font-semibold text-gray-900">
+                                        <h3 className="font-semibold text-foreground">
                                             Blockchain Secured
                                         </h3>
-                                        <p className="text-xs text-gray-600">
+                                        <p className="text-xs text-muted-foreground">
                                             Tamper-proof verification
                                         </p>
                                     </div>
                                 </div>
                             </Card>
-                            <Card className="p-4 bg-white/80 backdrop-blur border-teal-200">
+                            <Card className="p-4 bg-card/80 backdrop-blur border-primary/20">
                                 <div className="flex items-center space-x-3">
-                                    <div className="rounded-full bg-teal-100 p-3">
-                                        <Award className="h-6 w-6 text-teal-600" />
+                                    <div className="rounded-full bg-primary/10 p-3">
+                                        <Award className="h-6 w-6 text-primary" />
                                     </div>
                                     <div>
-                                        <h3 className="font-semibold text-gray-900">
+                                        <h3 className="font-semibold text-foreground">
                                             Instant Verification
                                         </h3>
-                                        <p className="text-xs text-gray-600">
+                                        <p className="text-xs text-muted-foreground">
                                             Real-time credential check
                                         </p>
                                     </div>
                                 </div>
                             </Card>
-                            <Card className="p-4 bg-white/80 backdrop-blur border-purple-200">
+                            <Card className="p-4 bg-card/80 backdrop-blur border-primary/20">
                                 <div className="flex items-center space-x-3">
-                                    <div className="rounded-full bg-purple-100 p-3">
-                                        <Lock className="h-6 w-6 text-purple-600" />
+                                    <div className="rounded-full bg-primary/10 p-3">
+                                        <Lock className="h-6 w-6 text-primary" />
                                     </div>
                                     <div>
-                                        <h3 className="font-semibold text-gray-900">
+                                        <h3 className="font-semibold text-foreground">
                                             Privacy Protected
                                         </h3>
-                                        <p className="text-xs text-gray-600">
+                                        <p className="text-xs text-muted-foreground">
                                             Secure credential data
                                         </p>
                                     </div>
@@ -162,16 +124,16 @@ function VerifyContent() {
                         </div>
 
                         {/* Main Verification Card */}
-                        <Card className="p-8 md:p-12 bg-white/90 backdrop-blur shadow-xl">
+                        <Card className="p-8 md:p-12 bg-card/90 backdrop-blur shadow-xl">
                             <div className="flex flex-col items-center space-y-6">
-                                <div className="rounded-full bg-linear-to-br from-blue-100 to-teal-100 p-8">
-                                    <Shield className="h-20 w-20 text-blue-600" />
+                                <div className="rounded-full bg-primary/10 p-8">
+                                    <Shield className="h-20 w-20 text-primary" />
                                 </div>
                                 <div className="text-center space-y-3">
-                                    <h1 className="text-4xl font-bold text-gray-900">
+                                    <h1 className="text-4xl font-bold text-foreground">
                                         Verify Academic Credential
                                     </h1>
-                                    <p className="text-lg text-gray-600 max-w-2xl">
+                                    <p className="text-lg text-muted-foreground max-w-2xl">
                                         Enter a credential token ID to instantly verify its
                                         authenticity on the blockchain
                                     </p>
@@ -181,7 +143,7 @@ function VerifyContent() {
                                     <div>
                                         <label
                                             htmlFor="manual-token"
-                                            className="block text-sm font-semibold text-gray-700 mb-2"
+                                            className="block text-sm font-semibold text-foreground mb-2"
                                         >
                                             Credential Token ID
                                         </label>
@@ -194,9 +156,9 @@ function VerifyContent() {
                                                 e.key === 'Enter' && handleManualVerify()
                                             }
                                             placeholder="Enter token ID (e.g., 1, 2, 3...)"
-                                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                            className="w-full px-4 py-3 border-2 border-border rounded-lg focus:ring-2 focus:ring-ring/25 focus:border-ring transition-all"
                                         />
-                                        <p className="text-xs text-gray-500 mt-2">
+                                        <p className="text-xs text-muted-foreground mt-2">
                                             💡 The token ID can be found on the credential or in the
                                             QR code
                                         </p>
@@ -204,7 +166,7 @@ function VerifyContent() {
                                     <Button
                                         onClick={handleManualVerify}
                                         disabled={!manualToken.trim()}
-                                        className="w-full bg-linear-to-r from-blue-600 to-teal-600 hover:from-blue-700 hover:to-teal-700 text-white py-6 text-lg font-semibold"
+                                        className="w-full py-6 text-lg font-semibold"
                                     >
                                         <Shield className="h-5 w-5 mr-2" />
                                         Verify Credential
@@ -213,27 +175,27 @@ function VerifyContent() {
 
                                 <div className="mt-8 text-center space-y-4">
                                     <div className="flex items-center justify-center space-x-2">
-                                        <div className="h-px bg-gray-300 w-20"></div>
-                                        <p className="text-sm text-gray-500 font-medium">OR</p>
-                                        <div className="h-px bg-gray-300 w-20"></div>
+                                        <div className="h-px bg-border w-20"></div>
+                                        <p className="text-sm text-muted-foreground font-medium">OR</p>
+                                        <div className="h-px bg-border w-20"></div>
                                     </div>
-                                    <p className="text-sm text-gray-600">
+                                    <p className="text-sm text-muted-foreground">
                                         📱 Scan a QR code to verify automatically
                                     </p>
                                 </div>
 
-                                <div className="w-full max-w-xl rounded-xl border border-blue-100 bg-blue-50/60 p-3 sm:p-4">
+                                <div className="w-full max-w-xl rounded-xl border border-primary/20 bg-primary/10/60 p-3 sm:p-4">
                                     {!scanMode ? (
                                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                             <div className="flex items-start gap-3">
-                                                <div className="rounded-full bg-white p-3 text-blue-600 shadow-sm">
+                                                <div className="rounded-full bg-card p-3 text-primary shadow-sm">
                                                     <Camera className="h-5 w-5" />
                                                 </div>
                                                 <div>
-                                                    <p className="font-semibold text-gray-900">
+                                                    <p className="font-semibold text-foreground">
                                                         Camera QR scan
                                                     </p>
-                                                    <p className="text-sm text-gray-600">
+                                                    <p className="text-sm text-muted-foreground">
                                                         Camera permission is requested only when you
                                                         start scanning.
                                                     </p>
@@ -241,7 +203,7 @@ function VerifyContent() {
                                             </div>
                                             <Button
                                                 onClick={startScanner}
-                                                className="w-full bg-blue-600 hover:bg-blue-700 sm:w-auto"
+                                                className="w-full sm:w-auto"
                                             >
                                                 <ScanLine className="mr-2 h-4 w-4" />
                                                 Start Scan
@@ -251,10 +213,10 @@ function VerifyContent() {
                                         <div className="space-y-4">
                                             <div className="flex items-center justify-between gap-3">
                                                 <div>
-                                                    <p className="font-semibold text-gray-900">
+                                                    <p className="font-semibold text-foreground">
                                                         Scan credential QR
                                                     </p>
-                                                    <p className="text-sm text-gray-600">
+                                                    <p className="text-sm text-muted-foreground">
                                                         {scanMessage}
                                                     </p>
                                                 </div>
@@ -268,7 +230,7 @@ function VerifyContent() {
                                                 </Button>
                                             </div>
 
-                                            <div className="relative overflow-hidden rounded-lg border border-blue-200 bg-gray-950">
+                                            <div className="relative overflow-hidden rounded-lg border border-border bg-foreground">
                                                 <div
                                                     id={QR_READER_ID}
                                                     className="min-h-[280px] w-full sm:min-h-[340px]"
@@ -293,10 +255,10 @@ function VerifyContent() {
                                                     scanState === 'invalid' ||
                                                     scanState === 'unsupported' ||
                                                     scanState === 'error'
-                                                        ? 'border-red-200 bg-red-50 text-red-800'
+                                                        ? 'border-destructive/25 bg-destructive/10 text-destructive'
                                                         : scanState === 'success'
-                                                          ? 'border-green-200 bg-green-50 text-green-800'
-                                                          : 'border-blue-200 bg-white text-gray-700'
+                                                          ? 'border-success/25 bg-success/10 text-success'
+                                                          : 'border-primary/20 bg-card text-foreground'
                                                 }`}
                                                 role="status"
                                                 aria-live="polite"
@@ -340,32 +302,32 @@ function VerifyContent() {
 
                         {/* How It Works Section */}
                         <div className="mt-12 grid md:grid-cols-3 gap-6">
-                            <Card className="p-6 bg-white/80 backdrop-blur text-center">
-                                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 font-bold text-xl mb-4">
+                            <Card className="p-6 bg-card/80 backdrop-blur text-center">
+                                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary font-bold text-xl mb-4">
                                     1
                                 </div>
-                                <h3 className="font-bold text-gray-900 mb-2">Enter Token ID</h3>
-                                <p className="text-sm text-gray-600">
+                                <h3 className="font-bold text-foreground mb-2">Enter Token ID</h3>
+                                <p className="text-sm text-muted-foreground">
                                     Input the credential token ID or scan the QR code
                                 </p>
                             </Card>
-                            <Card className="p-6 bg-white/80 backdrop-blur text-center">
-                                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-teal-100 text-teal-600 font-bold text-xl mb-4">
+                            <Card className="p-6 bg-card/80 backdrop-blur text-center">
+                                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary font-bold text-xl mb-4">
                                     2
                                 </div>
-                                <h3 className="font-bold text-gray-900 mb-2">
+                                <h3 className="font-bold text-foreground mb-2">
                                     Blockchain Verification
                                 </h3>
-                                <p className="text-sm text-gray-600">
+                                <p className="text-sm text-muted-foreground">
                                     System checks the credential against blockchain records
                                 </p>
                             </Card>
-                            <Card className="p-6 bg-white/80 backdrop-blur text-center">
-                                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-purple-100 text-purple-600 font-bold text-xl mb-4">
+                            <Card className="p-6 bg-card/80 backdrop-blur text-center">
+                                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary font-bold text-xl mb-4">
                                     3
                                 </div>
-                                <h3 className="font-bold text-gray-900 mb-2">View Results</h3>
-                                <p className="text-sm text-gray-600">
+                                <h3 className="font-bold text-foreground mb-2">View Results</h3>
+                                <p className="text-sm text-muted-foreground">
                                     Instantly see verification status and credential details
                                 </p>
                             </Card>
@@ -378,39 +340,8 @@ function VerifyContent() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-teal-50">
-                {/* Navbar */}
-                <nav className="border-b border-gray-200 bg-white/90 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
-                    <div className="container mx-auto px-4 py-4">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <Link href="/" className="flex items-center space-x-3">
-                                <Image
-                                    src="/logo.png"
-                                    alt="Acredia Logo"
-                                    width={40}
-                                    height={40}
-                                    className="rounded-lg"
-                                />
-                                <div>
-                                    <span className="text-xl sm:text-2xl font-bold bg-linear-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
-                                        ACREDIA
-                                    </span>
-                                    <span className="ml-2 text-xs bg-blue-600 text-white px-2 py-1 rounded-full font-semibold">
-                                        VERIFY
-                                    </span>
-                                </div>
-                            </Link>
-                            <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap sm:space-x-4">
-                                <Link href="/">
-                                    <Button variant="ghost" size="sm">
-                                        <Home className="h-4 w-4 mr-2" />
-                                        Home
-                                    </Button>
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
-                </nav>
+            <div className="min-h-screen bg-secondary/30">
+                <SiteNavbar />
 
                 <div className="flex items-center justify-center p-4 min-h-[calc(100vh-80px)]">
                     <Card className="w-full max-w-2xl p-8 space-y-8">
@@ -419,7 +350,7 @@ function VerifyContent() {
                             <Skeleton className="h-6 w-48" />
                             <Skeleton className="h-4 w-32" />
                         </div>
-                        <div className="space-y-6 pt-6 border-t border-gray-100">
+                        <div className="space-y-6 pt-6 border-t border-border">
                             <div className="flex items-start space-x-4">
                                 <Skeleton className="h-12 w-12 rounded-full" />
                                 <div className="space-y-2 flex-1">
@@ -440,61 +371,30 @@ function VerifyContent() {
 
     if (error || !credential) {
         return (
-            <div className="min-h-screen bg-linear-to-br from-red-50 via-white to-orange-50">
-                {/* Navbar */}
-                <nav className="border-b border-gray-200 bg-white/90 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
-                    <div className="container mx-auto px-4 py-4">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <Link href="/" className="flex items-center space-x-3">
-                                <Image
-                                    src="/logo.png"
-                                    alt="Acredia Logo"
-                                    width={40}
-                                    height={40}
-                                    className="rounded-lg"
-                                />
-                                <div>
-                                    <span className="text-xl sm:text-2xl font-bold bg-linear-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
-                                        ACREDIA
-                                    </span>
-                                    <span className="ml-2 text-xs bg-red-600 text-white px-2 py-1 rounded-full font-semibold">
-                                        ERROR
-                                    </span>
-                                </div>
-                            </Link>
-                            <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap sm:space-x-4">
-                                <Link href="/">
-                                    <Button variant="ghost" size="sm">
-                                        <Home className="h-4 w-4 mr-2" />
-                                        Home
-                                    </Button>
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
-                </nav>
+            <div className="min-h-screen bg-secondary/30">
+                <SiteNavbar />
 
                 <div className="flex items-center justify-center p-4 min-h-[calc(100vh-80px)]">
                     <Card className="w-full max-w-2xl p-8">
                         <div className="flex flex-col items-center justify-center space-y-6">
-                            <div className="rounded-full bg-red-100 p-6">
-                                <XCircle className="h-20 w-20 text-red-600" />
+                            <div className="rounded-full bg-destructive/10 p-6">
+                                <XCircle className="h-20 w-20 text-destructive" />
                             </div>
                             <div className="text-center space-y-2">
-                                <h1 className="text-3xl font-bold text-gray-900">
+                                <h1 className="text-3xl font-bold text-foreground">
                                     Verification Failed
                                 </h1>
-                                <p className="text-lg text-gray-600">
+                                <p className="text-lg text-muted-foreground">
                                     {error || 'Credential not found'}
                                 </p>
-                                <p className="text-sm text-gray-500 mt-4">
+                                <p className="text-sm text-muted-foreground mt-4">
                                     The credential token ID may be invalid or the credential does
                                     not exist in our system.
                                 </p>
                             </div>
                             <div className="flex w-full flex-col sm:w-auto sm:flex-row gap-3 sm:space-x-4">
                                 <Link href="/verify">
-                                    <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700">
+                                    <Button className="w-full sm:w-auto">
                                         Try Again
                                     </Button>
                                 </Link>
@@ -512,59 +412,18 @@ function VerifyContent() {
     }
 
     return (
-        <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-teal-50">
-            {/* Navbar */}
-            <nav className="border-b border-gray-200 bg-white/90 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
-                <div className="container mx-auto px-4 py-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <Link href="/" className="flex items-center space-x-3">
-                            <Image
-                                src="/logo.png"
-                                alt="Acredia Logo"
-                                width={40}
-                                height={40}
-                                className="rounded-lg"
-                            />
-                            <div>
-                                <span className="text-xl sm:text-2xl font-bold bg-linear-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
-                                    ACREDIA
-                                </span>
-                                <span className="ml-2 text-xs bg-green-600 text-white px-2 py-1 rounded-full font-semibold">
-                                    {verificationStatus === 'valid'
-                                        ? 'VERIFIED'
-                                        : verificationStatus === 'revoked'
-                                          ? 'REVOKED'
-                                          : 'VERIFY'}
-                                </span>
-                            </div>
-                        </Link>
-                        <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap sm:space-x-4">
-                            <Link href="/verify">
-                                <Button variant="ghost" size="sm">
-                                    <Shield className="h-4 w-4 mr-2" />
-                                    New Verification
-                                </Button>
-                            </Link>
-                            <Link href="/">
-                                <Button variant="ghost" size="sm">
-                                    <Home className="h-4 w-4 mr-2" />
-                                    Home
-                                </Button>
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </nav>
+        <div className="min-h-screen bg-secondary/30">
+            <SiteNavbar />
 
             <div className="container mx-auto px-4 py-8 md:py-12">
                 <div className="max-w-5xl mx-auto space-y-6">
                     {/* Header with Timestamp */}
                     <div className="text-center space-y-3">
-                        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
+                        <h1 className="text-3xl sm:text-4xl font-bold text-foreground">
                             Credential Verification Report
                         </h1>
-                        <p className="text-gray-600">Blockchain-verified academic credential</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-muted-foreground">Blockchain-verified academic credential</p>
+                        <p className="text-sm text-muted-foreground">
                             Verified on:{' '}
                             {new Date().toLocaleString('en-US', {
                                 dateStyle: 'full',
@@ -574,7 +433,7 @@ function VerifyContent() {
                     </div>
 
                     {/* Verification Status */}
-                    <Card className="p-8 md:p-12 bg-white/90 backdrop-blur shadow-xl border-2">
+                    <Card className="p-8 md:p-12 bg-card/90 backdrop-blur shadow-xl border-2">
                         <div className="flex flex-col items-center justify-center space-y-6">
                             {verificationStatus === 'valid' && (
                                 <>
@@ -595,7 +454,7 @@ function VerifyContent() {
                                         description="This credential has been revoked by the issuing institution"
                                     />
                                     {credential.revoked_at && (
-                                        <p className="text-sm font-medium text-gray-500">
+                                        <p className="text-sm font-medium text-muted-foreground">
                                             Revoked on: {formatDate(credential.revoked_at)}
                                         </p>
                                     )}
@@ -605,9 +464,9 @@ function VerifyContent() {
                     </Card>
 
                     {/* Credential Details */}
-                    <Card className="p-8 md:p-10 space-y-6 bg-white/90 backdrop-blur shadow-lg">
+                    <Card className="p-8 md:p-10 space-y-6 bg-card/90 backdrop-blur shadow-lg">
                         <div className="flex items-center justify-between border-b pb-4">
-                            <h3 className="text-2xl font-bold text-gray-900">
+                            <h3 className="text-2xl font-bold text-foreground">
                                 Credential Information
                             </h3>
                             <Badge variant="outline" className="text-sm">
@@ -619,12 +478,12 @@ function VerifyContent() {
                             {/* Student Information */}
                             <div className="space-y-4">
                                 <div className="flex items-start space-x-3">
-                                    <User className="h-5 w-5 text-blue-600 mt-0.5" />
+                                    <User className="h-5 w-5 text-primary mt-0.5" />
                                     <div>
-                                        <p className="text-sm font-medium text-gray-500">
+                                        <p className="text-sm font-medium text-muted-foreground">
                                             Student Name
                                         </p>
-                                        <p className="text-base font-semibold text-gray-900">
+                                        <p className="text-base font-semibold text-foreground">
                                             {credential.metadata?.credentialData?.studentName ||
                                                 'N/A'}
                                         </p>
@@ -633,12 +492,12 @@ function VerifyContent() {
 
                                 {credential.student_wallet_address && (
                                     <div className="flex items-start space-x-3">
-                                        <Hash className="h-5 w-5 text-blue-600 mt-0.5" />
+                                        <Hash className="h-5 w-5 text-primary mt-0.5" />
                                         <div>
-                                            <p className="text-sm font-medium text-gray-500">
+                                            <p className="text-sm font-medium text-muted-foreground">
                                                 Student Wallet
                                             </p>
-                                            <p className="text-xs font-mono text-gray-700 break-all">
+                                            <p className="text-xs font-mono text-foreground break-all">
                                                 {credential.student_wallet_address}
                                             </p>
                                         </div>
@@ -649,12 +508,12 @@ function VerifyContent() {
                             {/* Institution Information */}
                             <div className="space-y-4">
                                 <div className="flex items-start space-x-3">
-                                    <Building2 className="h-5 w-5 text-teal-600 mt-0.5" />
+                                    <Building2 className="h-5 w-5 text-primary mt-0.5" />
                                     <div>
-                                        <p className="text-sm font-medium text-gray-500">
+                                        <p className="text-sm font-medium text-muted-foreground">
                                             Issuing Institution
                                         </p>
-                                        <p className="text-base font-semibold text-gray-900">
+                                        <p className="text-base font-semibold text-foreground">
                                             {credential.institution?.name ||
                                                 credential.metadata?.credentialData
                                                     ?.institutionName ||
@@ -665,12 +524,12 @@ function VerifyContent() {
 
                                 {credential.issuer_wallet_address && (
                                     <div className="flex items-start space-x-3">
-                                        <Hash className="h-5 w-5 text-teal-600 mt-0.5" />
+                                        <Hash className="h-5 w-5 text-primary mt-0.5" />
                                         <div>
-                                            <p className="text-sm font-medium text-gray-500">
+                                            <p className="text-sm font-medium text-muted-foreground">
                                                 Issuer Wallet
                                             </p>
-                                            <p className="text-xs font-mono text-gray-700 break-all">
+                                            <p className="text-xs font-mono text-foreground break-all">
                                                 {credential.issuer_wallet_address}
                                             </p>
                                         </div>
@@ -678,19 +537,19 @@ function VerifyContent() {
                                 )}
 
                                 <div className="flex items-start space-x-3">
-                                    <Shield className="h-5 w-5 text-teal-600 mt-0.5" />
+                                    <Shield className="h-5 w-5 text-primary mt-0.5" />
                                     <div>
-                                        <p className="text-sm font-medium text-gray-500">
+                                        <p className="text-sm font-medium text-muted-foreground">
                                             Issuer Authorization
                                         </p>
-                                        <p className="text-base font-semibold text-gray-900">
+                                        <p className="text-base font-semibold text-foreground">
                                             {credential.issuer_authorized === false
                                                 ? 'No'
                                                 : credential.issuer_authorized === true
                                                   ? 'Yes'
                                                   : 'Unknown'}
                                         </p>
-                                        <p className="text-sm text-gray-600">
+                                        <p className="text-sm text-muted-foreground">
                                             {credential.issuer_authorized === false
                                                 ? 'This credential was issued by an institution that is no longer authorized to issue new credentials.'
                                                 : credential.issuer_authorized === true
@@ -704,12 +563,12 @@ function VerifyContent() {
                             {/* Credential Type & Details */}
                             <div className="space-y-4">
                                 <div className="flex items-start space-x-3">
-                                    <FileText className="h-5 w-5 text-purple-600 mt-0.5" />
+                                    <FileText className="h-5 w-5 text-primary mt-0.5" />
                                     <div>
-                                        <p className="text-sm font-medium text-gray-500">
+                                        <p className="text-sm font-medium text-muted-foreground">
                                             Credential Type
                                         </p>
-                                        <p className="text-base font-semibold text-gray-900">
+                                        <p className="text-base font-semibold text-foreground">
                                             {credential.metadata?.credentialData?.credentialType ||
                                                 'N/A'}
                                         </p>
@@ -718,12 +577,12 @@ function VerifyContent() {
 
                                 {credential.metadata?.credentialData?.degree && (
                                     <div className="flex items-start space-x-3">
-                                        <FileText className="h-5 w-5 text-purple-600 mt-0.5" />
+                                        <FileText className="h-5 w-5 text-primary mt-0.5" />
                                         <div>
-                                            <p className="text-sm font-medium text-gray-500">
+                                            <p className="text-sm font-medium text-muted-foreground">
                                                 Degree
                                             </p>
-                                            <p className="text-base font-semibold text-gray-900">
+                                            <p className="text-base font-semibold text-foreground">
                                                 {credential.metadata.credentialData.degree}
                                             </p>
                                         </div>
@@ -732,12 +591,12 @@ function VerifyContent() {
 
                                 {credential.metadata?.credentialData?.major && (
                                     <div className="flex items-start space-x-3">
-                                        <FileText className="h-5 w-5 text-purple-600 mt-0.5" />
+                                        <FileText className="h-5 w-5 text-primary mt-0.5" />
                                         <div>
-                                            <p className="text-sm font-medium text-gray-500">
+                                            <p className="text-sm font-medium text-muted-foreground">
                                                 Major
                                             </p>
-                                            <p className="text-base text-gray-900">
+                                            <p className="text-base text-foreground">
                                                 {credential.metadata.credentialData.major}
                                             </p>
                                         </div>
@@ -746,10 +605,10 @@ function VerifyContent() {
 
                                 {credential.metadata?.credentialData?.gpa && (
                                     <div className="flex items-start space-x-3">
-                                        <FileText className="h-5 w-5 text-purple-600 mt-0.5" />
+                                        <FileText className="h-5 w-5 text-primary mt-0.5" />
                                         <div>
-                                            <p className="text-sm font-medium text-gray-500">GPA</p>
-                                            <p className="text-base text-gray-900">
+                                            <p className="text-sm font-medium text-muted-foreground">GPA</p>
+                                            <p className="text-base text-foreground">
                                                 {credential.metadata.credentialData.gpa}
                                             </p>
                                         </div>
@@ -760,12 +619,12 @@ function VerifyContent() {
                             {/* Issue Date */}
                             <div className="space-y-4">
                                 <div className="flex items-start space-x-3">
-                                    <Calendar className="h-5 w-5 text-orange-600 mt-0.5" />
+                                    <Calendar className="h-5 w-5 text-warning mt-0.5" />
                                     <div>
-                                        <p className="text-sm font-medium text-gray-500">
+                                        <p className="text-sm font-medium text-muted-foreground">
                                             Issue Date
                                         </p>
-                                        <p className="text-base font-semibold text-gray-900">
+                                        <p className="text-base font-semibold text-foreground">
                                             {credential.metadata?.credentialData?.issueDate
                                                 ? formatDate(
                                                       credential.metadata.credentialData.issueDate,
@@ -781,12 +640,12 @@ function VerifyContent() {
                     {/* Subject-wise Marks */}
                     {credential.metadata?.credentialData?.subjects &&
                         credential.metadata.credentialData.subjects.length > 0 && (
-                            <Card className="p-8 md:p-10 space-y-6 bg-white/90 backdrop-blur shadow-lg border-l-4 border-purple-500">
+                            <Card className="p-8 md:p-10 space-y-6 bg-card/90 backdrop-blur shadow-lg border-l-4 border-primary">
                                 <div className="flex items-center space-x-3 border-b pb-4">
-                                    <div className="rounded-lg bg-purple-100 p-2">
-                                        <FileText className="h-6 w-6 text-purple-600" />
+                                    <div className="rounded-lg bg-primary/10 p-2">
+                                        <FileText className="h-6 w-6 text-primary" />
                                     </div>
-                                    <h3 className="text-2xl font-bold text-gray-900">
+                                    <h3 className="text-2xl font-bold text-foreground">
                                         Subject-wise Performance
                                     </h3>
                                 </div>
@@ -794,23 +653,23 @@ function VerifyContent() {
                                 <div className="overflow-x-auto">
                                     <table className="w-full">
                                         <thead>
-                                            <tr className="border-b-2 border-gray-200">
-                                                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
+                                            <tr className="border-b-2 border-border">
+                                                <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">
                                                     Subject
                                                 </th>
-                                                <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">
+                                                <th className="text-center py-3 px-4 text-sm font-semibold text-foreground">
                                                     Marks Obtained
                                                 </th>
-                                                <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">
+                                                <th className="text-center py-3 px-4 text-sm font-semibold text-foreground">
                                                     Max Marks
                                                 </th>
-                                                <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">
+                                                <th className="text-center py-3 px-4 text-sm font-semibold text-foreground">
                                                     Percentage
                                                 </th>
                                                 {credential.metadata?.credentialData?.subjects?.some(
                                                     (s: { grade?: string }) => s.grade,
                                                 ) && (
-                                                    <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">
+                                                    <th className="text-center py-3 px-4 text-sm font-semibold text-foreground">
                                                         Grade
                                                     </th>
                                                 )}
@@ -832,31 +691,31 @@ function VerifyContent() {
                                                     return (
                                                         <tr
                                                             key={index}
-                                                            className="border-b border-gray-100 hover:bg-gray-50"
+                                                            className="border-b border-border hover:bg-secondary/50"
                                                         >
-                                                            <td className="py-3 px-4 font-medium text-gray-900">
+                                                            <td className="py-3 px-4 font-medium text-foreground">
                                                                 {subject.name}
                                                             </td>
-                                                            <td className="text-center py-3 px-4 text-gray-700">
+                                                            <td className="text-center py-3 px-4 text-foreground">
                                                                 {subject.marks}
                                                             </td>
-                                                            <td className="text-center py-3 px-4 text-gray-700">
+                                                            <td className="text-center py-3 px-4 text-foreground">
                                                                 {subject.maxMarks}
                                                             </td>
                                                             <td className="text-center py-3 px-4">
                                                                 <span
                                                                     className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
                                                                         parseFloat(percentage) >= 75
-                                                                            ? 'bg-green-100 text-green-800'
+                                                                            ? 'bg-success/10 text-success'
                                                                             : parseFloat(
                                                                                     percentage,
                                                                                 ) >= 60
-                                                                              ? 'bg-blue-100 text-blue-800'
+                                                                              ? 'bg-primary/10 text-primary'
                                                                               : parseFloat(
                                                                                       percentage,
                                                                                   ) >= 40
-                                                                                ? 'bg-yellow-100 text-yellow-800'
-                                                                                : 'bg-red-100 text-red-800'
+                                                                                ? 'bg-warning/10 text-warning'
+                                                                                : 'bg-destructive/10 text-destructive'
                                                                     }`}
                                                                 >
                                                                     {percentage}%
@@ -866,7 +725,7 @@ function VerifyContent() {
                                                                 (s: { grade?: string }) => s.grade,
                                                             ) && (
                                                                 <td className="text-center py-3 px-4">
-                                                                    <span className="inline-block px-3 py-1 rounded-full text-sm font-bold bg-purple-100 text-purple-800">
+                                                                    <span className="inline-block px-3 py-1 rounded-full text-sm font-bold bg-primary/10 text-primary">
                                                                         {subject.grade || '-'}
                                                                     </span>
                                                                 </td>
@@ -881,18 +740,18 @@ function VerifyContent() {
 
                                 {/* Summary Stats */}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                                    <div className="bg-blue-50 p-4 rounded-lg text-center">
-                                        <p className="text-sm text-gray-600 mb-1">Total Subjects</p>
-                                        <p className="text-2xl font-bold text-blue-600">
+                                    <div className="bg-primary/10 p-4 rounded-lg text-center">
+                                        <p className="text-sm text-muted-foreground mb-1">Total Subjects</p>
+                                        <p className="text-2xl font-bold text-primary">
                                             {credential.metadata?.credentialData?.subjects
                                                 ?.length || 0}
                                         </p>
                                     </div>
-                                    <div className="bg-green-50 p-4 rounded-lg text-center">
-                                        <p className="text-sm text-gray-600 mb-1">
+                                    <div className="bg-success/10 p-4 rounded-lg text-center">
+                                        <p className="text-sm text-muted-foreground mb-1">
                                             Average Percentage
                                         </p>
-                                        <p className="text-2xl font-bold text-green-600">
+                                        <p className="text-2xl font-bold text-success">
                                             {(() => {
                                                 const validSubjects = (
                                                     credential.metadata?.credentialData?.subjects ||
@@ -916,9 +775,9 @@ function VerifyContent() {
                                             })()}
                                         </p>
                                     </div>
-                                    <div className="bg-purple-50 p-4 rounded-lg text-center">
-                                        <p className="text-sm text-gray-600 mb-1">Total Marks</p>
-                                        <p className="text-2xl font-bold text-purple-600">
+                                    <div className="bg-primary/10 p-4 rounded-lg text-center">
+                                        <p className="text-sm text-muted-foreground mb-1">Total Marks</p>
+                                        <p className="text-2xl font-bold text-primary">
                                             {(
                                                 credential.metadata?.credentialData?.subjects || []
                                             ).reduce(
@@ -941,20 +800,20 @@ function VerifyContent() {
                         )}
 
                     {/* Blockchain Details */}
-                    <Card className="p-8 md:p-10 space-y-6 bg-white/90 backdrop-blur shadow-lg border-l-4 border-blue-500">
+                    <Card className="p-8 md:p-10 space-y-6 bg-card/90 backdrop-blur shadow-lg border-l-4 border-primary">
                         <div className="flex items-center space-x-3 border-b pb-4">
-                            <div className="rounded-lg bg-blue-100 p-2">
-                                <Shield className="h-6 w-6 text-blue-600" />
+                            <div className="rounded-lg bg-primary/10 p-2">
+                                <Shield className="h-6 w-6 text-primary" />
                             </div>
-                            <h3 className="text-2xl font-bold text-gray-900">
+                            <h3 className="text-2xl font-bold text-foreground">
                                 Blockchain Verification
                             </h3>
                         </div>
 
                         <div className="space-y-6">
-                            <div className="bg-blue-50 p-4 rounded-lg">
-                                <p className="text-sm font-medium text-blue-900 mb-2">Token ID</p>
-                                <p className="text-lg font-mono font-bold text-blue-700">
+                            <div className="bg-primary/10 p-4 rounded-lg">
+                                <p className="text-sm font-medium text-primary mb-2">Token ID</p>
+                                <p className="text-lg font-mono font-bold text-primary">
                                     #{credential.token_id}
                                 </p>
                             </div>
@@ -962,15 +821,15 @@ function VerifyContent() {
                             {credential.blockchain_hash && (
                                 <div>
                                     <div className="flex items-center justify-between mb-2">
-                                        <p className="text-sm font-semibold text-gray-700">
+                                        <p className="text-sm font-semibold text-foreground">
                                             Transaction Hash
                                         </p>
                                         <Badge variant="outline" className="text-xs">
                                             Stellar Testnet
                                         </Badge>
                                     </div>
-                                    <div className="flex items-center space-x-2 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                        <p className="text-sm font-mono text-gray-900 break-all flex-1">
+                                    <div className="flex items-center space-x-2 bg-secondary/50 p-4 rounded-lg border border-border">
+                                        <p className="text-sm font-mono text-foreground break-all flex-1">
                                             {credential.blockchain_hash}
                                         </p>
                                         <Button
@@ -995,15 +854,15 @@ function VerifyContent() {
                             {credential.ipfs_hash && (
                                 <div>
                                     <div className="flex items-center justify-between mb-2">
-                                        <p className="text-sm font-semibold text-gray-700">
+                                        <p className="text-sm font-semibold text-foreground">
                                             IPFS Content Hash
                                         </p>
                                         <Badge variant="outline" className="text-xs">
                                             Decentralized Storage
                                         </Badge>
                                     </div>
-                                    <div className="flex items-center space-x-2 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                        <p className="text-sm font-mono text-gray-900 break-all flex-1">
+                                    <div className="flex items-center space-x-2 bg-secondary/50 p-4 rounded-lg border border-border">
+                                        <p className="text-sm font-mono text-foreground break-all flex-1">
                                             {credential.ipfs_hash}
                                         </p>
                                         <Button
@@ -1025,9 +884,9 @@ function VerifyContent() {
                                 </div>
                             )}
 
-                            <div className="bg-linear-to-r from-blue-50 to-teal-50 p-4 rounded-lg border border-blue-200">
-                                <p className="text-sm text-gray-700 flex items-start">
-                                    <Shield className="h-5 w-5 text-blue-600 mr-2 mt-0.5 shrink-0" />
+                            <div className="bg-secondary/40 p-4 rounded-lg border border-border">
+                                <p className="text-sm text-foreground flex items-start">
+                                    <Shield className="h-5 w-5 text-primary mr-2 mt-0.5 shrink-0" />
                                     <span>
                                         <strong>Blockchain Security:</strong> This credential is
                                         permanently recorded on the Stellar testnet blockchain and
@@ -1042,7 +901,7 @@ function VerifyContent() {
                     {/* Actions */}
                     <div className="flex justify-center space-x-4 pb-8">
                         <Link href="/verify">
-                            <Button className="bg-blue-600 hover:bg-blue-700">
+                            <Button>
                                 <Shield className="h-4 w-4 mr-2" />
                                 Verify Another
                             </Button>

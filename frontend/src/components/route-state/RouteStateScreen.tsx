@@ -25,10 +25,10 @@ export function RouteStateScreen({
     const isLoading = variant === 'loading';
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-cyan-50 to-teal-50 px-4 py-12">
-            <Card className="w-full max-w-2xl border border-slate-200 bg-white/90 p-8 shadow-xl backdrop-blur">
-                <div className="flex flex-col items-center text-center">
-                    <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-teal-600 to-cyan-600 text-white shadow-lg">
+        <div className="flex min-h-screen items-center justify-center bg-app-wash px-4 py-12">
+            <Card className="w-full max-w-xl p-8 text-center sm:p-10">
+                <div className="flex flex-col items-center">
+                    <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                         {isLoading ? (
                             <Loader2 className="h-8 w-8 animate-spin" />
                         ) : variant === 'not-found' ? (
@@ -37,19 +37,21 @@ export function RouteStateScreen({
                             <AlertCircle className="h-8 w-8" />
                         )}
                     </div>
-                    <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-teal-600">
-                        ACREDIA
+                    <p className="eyebrow mb-3">ACREDIA</p>
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                        {title}
+                    </h1>
+                    <p className="mt-4 max-w-md text-base leading-7 text-muted-foreground">
+                        {description}
                     </p>
-                    <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{title}</h1>
-                    <p className="mt-4 max-w-xl text-lg leading-8 text-slate-600">{description}</p>
                     <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                         {actionLabel ? (
-                            <Button onClick={onAction} className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white">
+                            <Button onClick={onAction} size="lg">
                                 {actionLabel}
                             </Button>
                         ) : null}
                         {secondaryActionLabel ? (
-                            <Button variant="outline" asChild onClick={onSecondaryAction}>
+                            <Button variant="outline" size="lg" asChild onClick={onSecondaryAction}>
                                 <Link href="/">{secondaryActionLabel}</Link>
                             </Button>
                         ) : null}
