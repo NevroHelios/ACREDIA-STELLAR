@@ -130,6 +130,7 @@ describe('GET /api/institution/analytics', () => {
         const body = await res.json();
         const mar = body.verificationsOverTime.find((r: { month: string; count: number }) => r.month === '2026-03');
         expect(mar?.count).toBe(2);
+        expect(mockLogsIn).toHaveBeenCalledWith('credential_id', ['c1']);
     });
 
     it('returns 500 when credential query throws', async () => {
