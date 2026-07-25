@@ -35,6 +35,7 @@ pub enum ContractError {
     NotInitialized = 7,
     SameOwner = 8,
     NoPendingOwner = 9,
+    ContractPaused = 10,
 }
 
 #[contracttype]
@@ -48,6 +49,7 @@ pub enum DataKey {
     HashIndex(BytesN<32>),
     TotalCredentials,
     StorageVersion,
+    Paused,
 }
 
 #[contracttype]
@@ -112,6 +114,13 @@ fn extend_total_credentials_ttl(env: &Env) {
         PERSISTENT_THRESHOLD,
         PERSISTENT_BUMP_AMOUNT,
     );
+}
+
+fn contract_is_paused(env: &Env) -> bool {
+    env.storage()
+        .instance()
+        .get::<DataKey, bool>(&DataKey::Paused)
+        .unwrap_or(false)
 }
 
 /// Checks if an issuer is authorized, handles TTL extension for persistent storage,
@@ -277,6 +286,10 @@ impl AcrediaCredential {
     ) -> Result<u64, ContractError> {
         issuer.require_auth();
 
+        if contract_is_paused(&env) {
+            return Err(ContractError::ContractPaused);
+        }
+
         if !check_and_extend_authorization(&env, &issuer) {
             return Err(ContractError::IssuerNotAuthorized);
         }
@@ -347,6 +360,10 @@ impl AcrediaCredential {
         issuer: Address,
     ) -> Result<(), ContractError> {
         issuer.require_auth();
+
+        if contract_is_paused(&env) {
+            return Err(ContractError::ContractPaused);
+        }
 
         let mut credential: Credential = env
             .storage()
@@ -452,6 +469,32 @@ impl AcrediaCredential {
         extend_total_credentials_ttl(&env);
         extend_instance_ttl(&env);
         Ok(())
+    }
+
+    /// Halt all state-changing entrypoints.  Reads and verification continue
+    /// to work while paused so existing credentials remain verifiable.
+    pub fn pause(env: Env) -> Result<(), ContractError> {
+        let owner = read_owner(&env);
+        owner.require_auth();
+        env.storage().instance().set(&DataKey::Paused, &true);
+        extend_instance_ttl(&env);
+        env.events().publish((symbol_short!("paused"),), ());
+        Ok(())
+    }
+
+    /// Restore normal operation after an emergency pause.
+    pub fn unpause(env: Env) -> Result<(), ContractError> {
+        let owner = read_owner(&env);
+        owner.require_auth();
+        env.storage().instance().set(&DataKey::Paused, &false);
+        extend_instance_ttl(&env);
+        env.events().publish((symbol_short!("unpaused"),), ());
+        Ok(())
+    }
+
+    pub fn is_paused(env: Env) -> bool {
+        extend_instance_ttl(&env);
+        contract_is_paused(&env)
     }
 
     /// Upgrade the contract to a new WebAssembly code using a WASM hash.
@@ -1066,5 +1109,128 @@ mod tests {
 
         client.migrate();
         assert_eq!(client.get_storage_version(), 2);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Pause / circuit-breaker tests
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn test_pause_blocks_issue() {
+        let (env, contract, _, issuer, student) = setup();
+        env.as_contract(&contract, || {
+            AcrediaCredential::pause(env.clone()).unwrap();
+            assert!(AcrediaCredential::is_paused(env.clone()));
+
+            let result = AcrediaCredential::issue_credential(
+                env.clone(),
+                student,
+                issuer,
+                dummy_hash(&env, 30),
+                String::from_str(&env, "ipfs://paused"),
+            );
+            assert_eq!(result, Err(ContractError::ContractPaused));
+        });
+    }
+
+    #[test]
+    fn test_pause_blocks_revoke() {
+        let (env, contract, _, issuer, student) = setup();
+        let token_id = env.as_contract(&contract, || {
+            AcrediaCredential::issue_credential(
+                env.clone(),
+                student,
+                issuer.clone(),
+                dummy_hash(&env, 31),
+                String::from_str(&env, "ipfs://before-pause"),
+            )
+            .unwrap()
+        });
+
+        env.as_contract(&contract, || {
+            AcrediaCredential::pause(env.clone()).unwrap();
+            let result = AcrediaCredential::revoke_credential(env.clone(), token_id, issuer);
+            assert_eq!(result, Err(ContractError::ContractPaused));
+        });
+    }
+
+    #[test]
+    fn test_verify_works_while_paused() {
+        let (env, contract, _, issuer, student) = setup();
+        let hash = dummy_hash(&env, 32);
+        env.as_contract(&contract, || {
+            AcrediaCredential::issue_credential(
+                env.clone(),
+                student,
+                issuer,
+                hash.clone(),
+                String::from_str(&env, "ipfs://paused-verify"),
+            )
+            .unwrap();
+            AcrediaCredential::pause(env.clone()).unwrap();
+            // verify_credential and get_credential must still work
+            let cred = AcrediaCredential::verify_credential(env.clone(), hash.clone());
+            assert!(cred.is_some());
+            let cred2 = AcrediaCredential::get_credential(env.clone(), cred.unwrap().token_id);
+            assert!(cred2.is_ok());
+        });
+    }
+
+    #[test]
+    fn test_unpause_restores_issuance() {
+        let (env, contract, _, issuer, student) = setup();
+        // pause and unpause must be separate frames; same-frame double owner.require_auth errors
+        env.as_contract(&contract, || {
+            AcrediaCredential::pause(env.clone()).unwrap();
+        });
+        env.as_contract(&contract, || {
+            assert!(AcrediaCredential::is_paused(env.clone()));
+            AcrediaCredential::unpause(env.clone()).unwrap();
+            assert!(!AcrediaCredential::is_paused(env.clone()));
+            // issue uses issuer auth (different address), so no conflict
+            let result = AcrediaCredential::issue_credential(
+                env.clone(),
+                student,
+                issuer,
+                dummy_hash(&env, 33),
+                String::from_str(&env, "ipfs://after-unpause"),
+            );
+            assert!(result.is_ok());
+        });
+    }
+
+    #[test]
+    fn test_pause_event() {
+        let (env, contract, _, _, _) = setup();
+        env.as_contract(&contract, || {
+            AcrediaCredential::pause(env.clone()).unwrap();
+        });
+        assert_eq!(
+            last_event_topics(&env),
+            vec![&env, symbol_short!("paused").into_val(&env)]
+        );
+    }
+
+    #[test]
+    fn test_unpause_event() {
+        let (env, contract, _, _, _) = setup();
+        env.as_contract(&contract, || {
+            AcrediaCredential::pause(env.clone()).unwrap();
+        });
+        env.as_contract(&contract, || {
+            AcrediaCredential::unpause(env.clone()).unwrap();
+        });
+        assert_eq!(
+            last_event_topics(&env),
+            vec![&env, symbol_short!("unpaused").into_val(&env)]
+        );
+    }
+
+    #[test]
+    fn test_is_paused_default_false() {
+        let (env, contract, _, _, _) = setup();
+        env.as_contract(&contract, || {
+            assert!(!AcrediaCredential::is_paused(env.clone()));
+        });
     }
 }
