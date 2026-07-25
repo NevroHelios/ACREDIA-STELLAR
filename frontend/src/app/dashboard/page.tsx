@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, List, Shield, Upload, User, Wallet } from 'lucide-react';
+import { ArrowRight, BarChart2, List, Shield, Upload, User, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { CredentialUploadForm } from '@/components/institution/CredentialUploadForm';
+import { InstitutionAnalytics } from '@/components/institution/InstitutionAnalytics';
 import { IssuedCredentialsList } from '@/components/institution/IssuedCredentialsList';
 import StudentCredentialsList from '@/components/student/StudentCredentialsList';
 import { Card } from '@/components/ui/card';
@@ -261,7 +262,7 @@ function DashboardContent() {
 
                     {institutionId && (
                         <Tabs defaultValue="issue" className="w-full">
-                            <TabsList className="grid w-full max-w-md grid-cols-2">
+                            <TabsList className="grid w-full max-w-lg grid-cols-3">
                                 <TabsTrigger value="issue" className="gap-2">
                                     <Upload className="h-4 w-4" />
                                     Issue credential
@@ -269,6 +270,10 @@ function DashboardContent() {
                                 <TabsTrigger value="view" className="gap-2">
                                     <List className="h-4 w-4" />
                                     View issued
+                                </TabsTrigger>
+                                <TabsTrigger value="analytics" className="gap-2">
+                                    <BarChart2 className="h-4 w-4" />
+                                    Analytics
                                 </TabsTrigger>
                             </TabsList>
 
@@ -287,6 +292,10 @@ function DashboardContent() {
                                     institutionId={institutionId}
                                     refreshTrigger={refreshTrigger}
                                 />
+                            </TabsContent>
+
+                            <TabsContent value="analytics" className="mt-6">
+                                <InstitutionAnalytics />
                             </TabsContent>
                         </Tabs>
                     )}
