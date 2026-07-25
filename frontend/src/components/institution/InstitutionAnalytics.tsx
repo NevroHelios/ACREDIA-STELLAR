@@ -115,7 +115,7 @@ export function InstitutionAnalytics() {
             a.href = url;
             a.download = 'credentials.csv';
             a.click();
-            URL.revokeObjectURL(url);
+            setTimeout(() => URL.revokeObjectURL(url), 100);
             toast.success('Export downloaded');
         } catch (err) {
             captureException(err, { context: 'InstitutionAnalytics.export' });
