@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { Building2, ChevronDown, GraduationCap, Menu, ShieldCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { activeNetwork } from '@/lib/stellar';
 
 const solutions = [
     {
@@ -74,9 +75,16 @@ export function SiteNavbar() {
                         className="h-9 w-9 object-contain"
                         priority
                     />
-                    <span className="text-lg font-bold tracking-tight text-foreground">
-                        Acredia
-                    </span>
+                    <div className="flex flex-col">
+                        <span className="text-lg font-bold leading-none tracking-tight text-foreground">
+                            Acredia
+                        </span>
+                        {activeNetwork.kind === 'testnet' && (
+                            <span className="mt-1 w-fit rounded-sm bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-amber-600">
+                                Testnet
+                            </span>
+                        )}
+                    </div>
                 </Link>
 
                 {/* Desktop nav */}

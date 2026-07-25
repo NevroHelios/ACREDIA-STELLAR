@@ -719,11 +719,14 @@ npm start
 
 Before deploying to production:
 
+- **Switch to Mainnet**: Set `NEXT_PUBLIC_STELLAR_NETWORK=mainnet` in your production environment variables to point the application to the live Stellar network.
+- **Update Contract Addresses**: Ensure `NEXT_PUBLIC_CREDENTIAL_NFT_CONTRACT` and `NEXT_PUBLIC_CREDENTIAL_REGISTRY_CONTRACT` are updated to your verified mainnet deployment IDs. (The app will fail to boot if it detects the known testnet contract on mainnet).
 - Use Stellar Public Network values only after contract review and a verified mainnet deployment.
 - Rotate any secret that was pasted into chat, screenshots, logs, browser code, or an issue.
 - Set server-only secrets (`SUPABASE_SERVICE_ROLE_KEY`, `PINATA_JWT`, Stellar secret keys) only in the hosting provider's protected environment variables.
 - Confirm Supabase RLS is enabled and production policies come from `frontend/sql/FULL_SETUP.sql`.
 - Verify contract IDs on Stellar Expert before pointing users at a production environment.
+
 
 ---
 
