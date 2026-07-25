@@ -21,8 +21,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { User } from '@supabase/supabase-js';
 import type { AppRole, RoleState } from '@/types';
-import { normalizePublicSignupRole } from './adminAccess';
-
 // ---------------------------------------------------------------------------
 // Core resolver (works with any Supabase client — browser or server)
 // ---------------------------------------------------------------------------
