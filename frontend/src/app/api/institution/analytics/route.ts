@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
 
         // Fetch credentials — lightweight select, no pagination (analytics needs full set)
         // TODO: swap this query to the indexer once issue #11 is implemented
+        // Note: the subsequent .in('credential_id', credIds) is unbounded; safe up to ~500 credentials
         const { data: credentials, error: credErr } = await supabase
             .from('credentials')
             .select('id, token_id, issued_at, revoked, metadata')

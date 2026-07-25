@@ -114,7 +114,9 @@ export function InstitutionAnalytics() {
             const a = document.createElement('a');
             a.href = url;
             a.download = 'credentials.csv';
+            document.body.appendChild(a);
             a.click();
+            document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(url), 100);
             toast.success('Export downloaded');
         } catch (err) {
