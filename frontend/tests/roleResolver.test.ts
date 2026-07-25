@@ -89,25 +89,12 @@ describe('resolveUserRole', () => {
         await expect(resolveUserRole(client, mockUser())).resolves.toBe('student');
     });
 
-    // ---- Tier 4: user_metadata.role fallback ----
+    // ---- Tier 4: role not provisioned ----
 
-    it('returns "institution" from metadata when no DB rows exist', async () => {
-        const client = createMockClient({});
-        const user = mockUser({ user_metadata: { role: 'institution' } });
-        await expect(resolveUserRole(client, user)).resolves.toBe('institution');
-    });
-
-    it('normalizes metadata "admin" to "student" (blocked by normalizePublicSignupRole)', async () => {
+    it('returns "unprovisioned" when no profile, no rows exist, even if metadata is present', async () => {
         const client = createMockClient({});
         const user = mockUser({ user_metadata: { role: 'admin' } });
-        await expect(resolveUserRole(client, user)).resolves.toBe('student');
-    });
-
-    // ---- Tier 5: unknown ----
-
-    it('returns "unknown" when no profile, no rows, and no metadata exist', async () => {
-        const client = createMockClient({});
-        await expect(resolveUserRole(client, mockUser())).resolves.toBe('unknown');
+        await expect(resolveUserRole(client, user)).resolves.toBe('unprovisioned');
     });
 
     // ---- Priority / precedence ----

@@ -99,6 +99,13 @@ export function useAuth() {
 }
 
 // Protected route component
+/**
+ * UI-only route guard.
+ *
+ * IMPORTANT: This is for UX only (preventing flashes of content).
+ * Every privileged action MUST be re-checked server-side (via serverAuth.ts)
+ * or on-chain. Do not rely on this component for actual security.
+ */
 export function ProtectedRoute({
     children,
     allowedRoles,
@@ -123,8 +130,7 @@ export function ProtectedRoute({
             user &&
             allowedRoles &&
             userRole !== 'loading' &&
-            userRole !== 'unknown' &&
-            !allowedRoles.includes(userRole)
+            !allowedRoles.includes(userRole as AppRole)
         ) {
             router.push('/dashboard');
         }
@@ -169,8 +175,7 @@ export function ProtectedRoute({
     if (
         allowedRoles &&
         userRole !== 'loading' &&
-        userRole !== 'unknown' &&
-        !allowedRoles.includes(userRole)
+        !allowedRoles.includes(userRole as AppRole)
     ) {
         return null;
     }

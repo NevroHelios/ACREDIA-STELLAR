@@ -4,9 +4,10 @@ export type AppRole = 'student' | 'institution' | 'admin';
 /**
  * Role states used by the auth system, including transient states.
  * - `'loading'`: role resolution is in progress (initial render)
- * - `'unknown'`: role could not be determined (no DB rows, no metadata)
+ * - `'unknown'`: role could not be determined (e.g. network error)
+ * - `'unprovisioned'`: user authenticated but has no valid role assigned
  */
-export type RoleState = AppRole | 'unknown' | 'loading';
+export type RoleState = AppRole | 'unknown' | 'loading' | 'unprovisioned';
 
 /** @deprecated Use `AppRole` instead. Kept for backward compatibility. */
 export type UserRole = AppRole;
