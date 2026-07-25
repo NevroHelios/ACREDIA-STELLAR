@@ -11,6 +11,7 @@ export function last12Months(): string[] {
 export function groupByMonth(dates: string[]): Record<string, number> {
     const counts: Record<string, number> = {};
     for (const d of dates) {
+        if (d.length < 7) continue;
         const m = d.slice(0, 7);
         counts[m] = (counts[m] ?? 0) + 1;
     }
