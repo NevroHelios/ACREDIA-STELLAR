@@ -7,6 +7,7 @@ import { LogOut } from 'lucide-react';
 import { ConnectWallet } from '@/components/ui/ConnectWallet';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { activeNetwork } from '@/lib/stellar';
 
 interface DashboardTopbarProps {
     brandBadge?: string;
@@ -42,9 +43,16 @@ export function DashboardTopbar({
                         height={34}
                         className="h-8 w-8 object-contain"
                     />
-                    <span className="text-lg font-bold tracking-tight text-foreground">
-                        Acredia
-                    </span>
+                    <div className="flex flex-col">
+                        <span className="text-lg font-bold leading-none tracking-tight text-foreground">
+                            Acredia
+                        </span>
+                        {activeNetwork.kind === 'testnet' && (
+                            <span className="mt-1 w-fit rounded-sm bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-amber-600">
+                                Testnet
+                            </span>
+                        )}
+                    </div>
                     {brandBadge && (
                         <span
                             className={cn(

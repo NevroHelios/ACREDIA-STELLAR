@@ -195,10 +195,16 @@ function buildStellarConfig(isProduction: boolean): StellarNetworkConfig {
     };
 }
 
-function readContractId(name: ContractName, envName: string, isProduction: boolean): string {
+function readContractId(name: ContractName, envName: string, isProduction: boolean, networkKind: StellarNetworkKind): string {
     const value = requireProductionValue(envName, readEnv(envName), isProduction);
     if (value && !StrKey.isValidContract(value)) {
         configError(`${envName} must be a valid Stellar contract ID for ${name}.`);
+    }
+
+    // Fail fast if a known testnet contract is used on mainnet
+    const KNOWN_TESTNET_CONTRACT = 'CARWFW27MJ3OJADAUAHI3TDFHIL62YMLVEKTUTMSNXOMH7JJTNZKC3DK';
+    if (networkKind === 'mainnet' && value === KNOWN_TESTNET_CONTRACT) {
+        configError(`Cannot use the known testnet contract ${value} on mainnet for ${name}. Update your environment variables.`);
     }
 
     return value;
@@ -225,23 +231,27 @@ function buildRuntimeConfig(): RuntimeConfig {
     );
     const debugFlag = debugFlagSchema.safeParse(readEnv('NEXT_PUBLIC_ENABLE_DEBUG_LOGS'));
 
+    const stellar = buildStellarConfig(isProduction);
+    
     return {
         isProduction,
         supabase: {
             url: parseHttpUrl('NEXT_PUBLIC_SUPABASE_URL', supabaseUrl),
             anonKey: supabaseAnonKey,
         },
-        stellar: buildStellarConfig(isProduction),
+        stellar,
         contracts: {
             CREDENTIAL_NFT: readContractId(
                 'CREDENTIAL_NFT',
                 'NEXT_PUBLIC_CREDENTIAL_NFT_CONTRACT',
                 isProduction,
+                stellar.kind
             ),
             CREDENTIAL_REGISTRY: readContractId(
                 'CREDENTIAL_REGISTRY',
                 'NEXT_PUBLIC_CREDENTIAL_REGISTRY_CONTRACT',
                 isProduction,
+                stellar.kind
             ),
         },
         ipfs: {
