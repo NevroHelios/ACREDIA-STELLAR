@@ -1,0 +1,124 @@
+import { NextRequest, NextResponse } from 'next/server';
+import {
+    getServiceRoleClient,
+    hasServiceRoleEnv,
+    requireAuthenticatedRequest,
+} from '@/lib/serverAuth';
+import { last12Months, groupByMonth, fillMonths, topVerified } from '@/lib/analyticsAggregation';
+import { captureException, structuredLog } from '@/lib/debug';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: NextRequest) {
+    const requestId = request.headers.get('x-request-id') ?? 'unknown';
+    try {
+        const authCheck = await requireAuthenticatedRequest(request);
+        if (!authCheck.ok) {
+            return NextResponse.json(
+                { success: false, error: authCheck.error },
+                { status: authCheck.status },
+            );
+        }
+
+        const supabase = hasServiceRoleEnv()
+            ? getServiceRoleClient()
+            : (() => {
+                  throw new Error('Service role key required');
+              })();
+
+        const { data: inst, error: instErr } = await supabase
+            .from('institutions')
+            .select('id')
+            .eq('auth_user_id', authCheck.userId)
+            .maybeSingle();
+
+        if (instErr) {
+            structuredLog('ERROR', 'Error fetching institution for analytics', requestId, {
+                error: instErr,
+            });
+            return NextResponse.json(
+                { success: false, error: 'Failed to load institution profile' },
+                { status: 500 },
+            );
+        }
+        if (!inst?.id) {
+            return NextResponse.json(
+                { success: false, error: 'Institution not found' },
+                { status: 404 },
+            );
+        }
+
+        // Fetch credentials — lightweight select, no pagination (analytics needs full set)
+        // TODO: swap this query to the indexer once issue #11 is implemented
+        const { data: credentials, error: credErr } = await supabase
+            .from('credentials')
+            .select('id, token_id, issued_at, revoked, metadata')
+            .eq('institution_id', inst.id);
+
+        if (credErr) throw credErr;
+
+        const creds = credentials ?? [];
+        const months = last12Months();
+
+        const issuedOverTime = fillMonths(groupByMonth(creds.map((c) => c.issued_at)), months);
+        const active = creds.filter((c) => !c.revoked).length;
+        const statusBreakdown = { active, revoked: creds.length - active, total: creds.length };
+
+        let verificationsOverTime: { month: string; count: number }[] = months.map((m) => ({
+            month: m,
+            count: 0,
+        }));
+        let topVerifiedCredentials: {
+            tokenId: string;
+            credentialType: string;
+            studentName: string;
+            count: number;
+        }[] = [];
+
+        if (creds.length > 0) {
+            const credIds = creds.map((c) => c.id);
+            const { data: logs, error: logsErr } = await supabase
+                .from('verification_logs')
+                .select('credential_id, created_at')
+                .in('credential_id', credIds);
+
+            if (logsErr) throw logsErr;
+
+            const logRows = logs ?? [];
+            verificationsOverTime = fillMonths(
+                groupByMonth(logRows.map((l) => l.created_at ?? '')),
+                months,
+            );
+
+            const credMap = new Map(
+                creds.map((c) => [
+                    c.id,
+                    {
+                        tokenId: c.token_id,
+                        credentialType:
+                            (c.metadata as { credentialData?: { credentialType?: string } } | null)
+                                ?.credentialData?.credentialType ?? 'Unknown',
+                        studentName:
+                            (c.metadata as { credentialData?: { studentName?: string } } | null)
+                                ?.credentialData?.studentName ?? 'Unknown',
+                    },
+                ]),
+            );
+            topVerifiedCredentials = topVerified(logRows, credMap);
+        }
+
+        return NextResponse.json({
+            success: true,
+            issuedOverTime,
+            statusBreakdown,
+            verificationsOverTime,
+            topVerifiedCredentials,
+        });
+    } catch (err) {
+        captureException(err, { requestId, context: 'GET /api/institution/analytics' });
+        return NextResponse.json(
+            { success: false, error: 'Failed to fetch analytics' },
+            { status: 500 },
+        );
+    }
+}
