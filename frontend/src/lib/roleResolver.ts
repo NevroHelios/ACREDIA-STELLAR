@@ -21,8 +21,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { User } from '@supabase/supabase-js';
 import type { AppRole, RoleState } from '@/types';
-import { normalizePublicSignupRole } from './adminAccess';
-
 // ---------------------------------------------------------------------------
 // Core resolver (works with any Supabase client — browser or server)
 // ---------------------------------------------------------------------------
@@ -37,7 +35,7 @@ import { normalizePublicSignupRole } from './adminAccess';
 export async function resolveUserRole(
     client: SupabaseClient,
     user: User | null,
-): Promise<AppRole | 'unknown'> {
+): Promise<AppRole | 'unprovisioned' | 'unknown'> {
     if (!user) {
         return 'unknown';
     }
@@ -60,14 +58,8 @@ export async function resolveUserRole(
         return 'student';
     }
 
-    // 4. Metadata fallback (never returns 'admin')
-    const metadataRole = user.user_metadata?.role;
-    if (metadataRole) {
-        return normalizePublicSignupRole(metadataRole);
-    }
-
-    // 5. Nothing matched
-    return 'unknown';
+    // 4. Nothing matched - role not provisioned
+    return 'unprovisioned';
 }
 
 // ---------------------------------------------------------------------------
@@ -96,7 +88,7 @@ export async function resolveUserRoleClient(
 export async function resolveUserRoleServer(
     client: SupabaseClient,
     userId: string,
-): Promise<AppRole | 'unknown'> {
+): Promise<AppRole | 'unprovisioned' | 'unknown'> {
     // Create a minimal User-like object for the shared resolver
     const { data: authData } = await client.auth.admin.getUserById(userId);
     const user = authData?.user ?? null;
