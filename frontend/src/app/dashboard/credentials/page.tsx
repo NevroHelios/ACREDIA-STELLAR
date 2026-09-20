@@ -1,12 +1,12 @@
 'use client';
 
 import { Suspense } from 'react';
-import { ConsoleShell } from '@/components/console/ConsoleShell';
+import { ConsolePage } from '@/components/console/ConsoleShell';
 import { WalletPromptCard } from '@/components/console/ConsoleCards';
 import StudentCredentialsList from '@/components/student/StudentCredentialsList';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CONSOLE_NAV } from '@/lib/consoleNav';
+
 import { useStellarAccount } from '@/contexts/StellarContext';
 import { ProtectedRoute, useAuth } from '@/contexts/AuthContext';
 
@@ -26,8 +26,7 @@ function StudentCredentialsContent() {
     const { address } = useStellarAccount();
 
     return (
-        <ConsoleShell
-            nav={CONSOLE_NAV.student}
+        <ConsolePage
             title="My credentials"
             subtitle="Every credential issued to you"
         >
@@ -43,7 +42,7 @@ function StudentCredentialsContent() {
                     />
                 </Suspense>
             </div>
-        </ConsoleShell>
+        </ConsolePage>
     );
 }
 

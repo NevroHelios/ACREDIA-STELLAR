@@ -21,7 +21,7 @@ import {
     Wallet,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { ConsoleShell } from '@/components/console/ConsoleShell';
+import { ConsolePage } from '@/components/console/ConsoleShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -45,8 +45,6 @@ import {
     type AdminInstitutionCredential,
     type AdminInstitutionSummary,
 } from '@/lib/adminApi';
-import { CONSOLE_NAV } from '@/lib/consoleNav';
-import { ProtectedRoute } from '@/contexts/AuthContext';
 
 interface DetailResponse {
     institution: AdminInstitutionSummary;
@@ -239,8 +237,7 @@ function InstitutionDetailContent() {
     const auditLogs = data?.auditLogs ?? [];
 
     return (
-        <ConsoleShell
-            nav={CONSOLE_NAV.admin}
+        <ConsolePage
             title={institution?.name ?? 'Institution'}
             subtitle={institution?.email ?? 'Institution details'}
             actions={
@@ -738,14 +735,12 @@ function InstitutionDetailContent() {
                     </Card>
                 </div>
             )}
-        </ConsoleShell>
+        </ConsolePage>
     );
 }
 
 export default function AdminInstitutionDetailPage() {
     return (
-        <ProtectedRoute allowedRoles={['admin']}>
             <InstitutionDetailContent />
-        </ProtectedRoute>
     );
 }

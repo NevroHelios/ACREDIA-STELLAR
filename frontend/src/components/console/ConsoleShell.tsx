@@ -167,6 +167,47 @@ function SidebarContent({
  * Everything role-specific arrives through the `nav` prop, so this component
  * never needs to know which role is signed in.
  */
+interface ConsolePageProps {
+    title?: ReactNode;
+    subtitle?: ReactNode;
+    /** Rendered on the right of the header — filters, refresh, etc. */
+    actions?: ReactNode;
+    children?: ReactNode;
+}
+
+/**
+ * The per-page header inside a console.
+ *
+ * Kept separate from `ConsoleShell` so the shell — sidebar, mobile drawer, auth
+ * gate — can live in a route `layout.tsx` and persist across navigation, while
+ * each page supplies only its own heading. Previously every page rendered its
+ * own `ConsoleShell`, so React unmounted and rebuilt the entire sidebar on each
+ * link click: the sidebar vanished for roughly a frame and came back as a new
+ * DOM node, which looked exactly like a full page reload.
+ */
+export function ConsolePage({ title, subtitle, actions, children }: ConsolePageProps) {
+    return (
+        <>
+            {(title || actions) && (
+                <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    {title && (
+                        <div className="min-w-0">
+                            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                                {title}
+                            </h1>
+                            {subtitle && <p className="mt-1.5 text-muted-foreground">{subtitle}</p>}
+                        </div>
+                    )}
+                    {actions && (
+                        <div className="flex shrink-0 items-center gap-2 sm:ml-auto">{actions}</div>
+                    )}
+                </div>
+            )}
+            {children}
+        </>
+    );
+}
+
 export function ConsoleShell({
     nav,
     title,
@@ -267,24 +308,11 @@ export function ConsoleShell({
                 </header>
 
                 <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+                    {/* A title passed directly to the shell still renders, so
+                        callers that have not moved to <ConsolePage> keep
+                        working unchanged. */}
                     {(title || actions) && (
-                        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                            {title && (
-                                <div className="min-w-0">
-                                    <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-                                        {title}
-                                    </h1>
-                                    {subtitle && (
-                                        <p className="mt-1.5 text-muted-foreground">{subtitle}</p>
-                                    )}
-                                </div>
-                            )}
-                            {actions && (
-                                <div className="flex shrink-0 items-center gap-2 sm:ml-auto">
-                                    {actions}
-                                </div>
-                            )}
-                        </div>
+                        <ConsolePage title={title} subtitle={subtitle} actions={actions} />
                     )}
                     {children}
                 </main>

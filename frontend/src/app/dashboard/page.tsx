@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ConsoleShell } from '@/components/console/ConsoleShell';
+import { ConsolePage } from '@/components/console/ConsoleShell';
 import { InstitutionOverview } from '@/components/console/overview/InstitutionOverview';
 import { PendingRoleOverview } from '@/components/console/overview/PendingRoleOverview';
 import { StudentOverview } from '@/components/console/overview/StudentOverview';
 import { RouteStateScreen } from '@/components/route-state/RouteStateScreen';
-import { getConsoleNav } from '@/lib/consoleNav';
+
 import { ProtectedRoute, useAuth } from '@/contexts/AuthContext';
 
 /**
@@ -67,8 +67,7 @@ function DashboardOverview() {
     const name = user?.user_metadata?.name || user?.email || 'there';
 
     return (
-        <ConsoleShell
-            nav={getConsoleNav(userRole)}
+        <ConsolePage
             title="Overview"
             subtitle={
                 userRole === 'institution' || userRole === 'student' ? (
@@ -90,7 +89,7 @@ function DashboardOverview() {
             ) : (
                 <PendingRoleOverview resolving={userRole === 'loading'} />
             )}
-        </ConsoleShell>
+        </ConsolePage>
     );
 }
 

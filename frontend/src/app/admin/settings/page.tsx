@@ -1,13 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { ConsoleShell } from '@/components/console/ConsoleShell';
+import { ConsolePage } from '@/components/console/ConsoleShell';
 import { AdminAccessPanel } from '@/components/admin/AdminAccessPanel';
 import { ChangePasswordPanel } from '@/components/settings/ChangePasswordPanel';
 import { AccountInformationPanel } from '@/components/settings/AccountInformationPanel';
 import { Card } from '@/components/ui/card';
-import { CONSOLE_NAV } from '@/lib/consoleNav';
-import { ProtectedRoute } from '@/contexts/AuthContext';
 
 /**
  * Admin account settings — /admin/settings
@@ -34,8 +32,7 @@ import { ProtectedRoute } from '@/contexts/AuthContext';
  */
 export default function AdminSettingsPage() {
     return (
-        <ProtectedRoute allowedRoles={['admin']}>
-            <ConsoleShell nav={CONSOLE_NAV.admin}>
+            <ConsolePage>
                 <div className="mx-auto max-w-2xl space-y-8">
                     <AccountInformationPanel />
                     <ChangePasswordPanel />
@@ -61,7 +58,6 @@ export default function AdminSettingsPage() {
                         </p>
                     </Card>
                 </div>
-            </ConsoleShell>
-        </ProtectedRoute>
+            </ConsolePage>
     );
 }

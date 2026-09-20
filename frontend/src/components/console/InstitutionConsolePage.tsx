@@ -1,14 +1,14 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { ConsoleShell } from '@/components/console/ConsoleShell';
+import { ConsolePage } from '@/components/console/ConsoleShell';
 import {
     InstitutionProfileSkeleton,
     InstitutionUnavailableCard,
     VerificationRequiredCard,
     WalletPromptCard,
 } from '@/components/console/ConsoleCards';
-import { CONSOLE_NAV } from '@/lib/consoleNav';
+
 import { useInstitutionProfile, type InstitutionProfile } from '@/hooks/useInstitutionProfile';
 
 /** An institution profile that is known to exist. */
@@ -61,11 +61,11 @@ export function InstitutionConsolePage({
         Boolean(walletPrompt) && !profile.loading && Boolean(profile.institutionId) && !profile.address;
 
     return (
-        <ConsoleShell nav={CONSOLE_NAV.institution} title={title} subtitle={subtitle} actions={actions}>
+        <ConsolePage title={title} subtitle={subtitle} actions={actions}>
             <div className="space-y-6">
                 {showWalletPrompt && <WalletPromptCard message={walletPrompt as string} />}
                 {body()}
             </div>
-        </ConsoleShell>
+        </ConsolePage>
     );
 }

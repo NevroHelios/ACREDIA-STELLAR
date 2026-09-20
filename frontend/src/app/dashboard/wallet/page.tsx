@@ -1,10 +1,10 @@
 'use client';
 
-import { ConsoleShell } from '@/components/console/ConsoleShell';
+import { ConsolePage } from '@/components/console/ConsoleShell';
 import { InfoField, WalletPromptCard, WalletStatus } from '@/components/console/ConsoleCards';
 import { ConnectWallet } from '@/components/ui/ConnectWallet';
 import { Card } from '@/components/ui/card';
-import { CONSOLE_NAV } from '@/lib/consoleNav';
+
 import { activeNetwork } from '@/lib/stellar';
 import { useStellarAccount } from '@/contexts/StellarContext';
 import { ProtectedRoute } from '@/contexts/AuthContext';
@@ -14,8 +14,7 @@ function StudentWalletContent() {
     const { address } = useStellarAccount();
 
     return (
-        <ConsoleShell
-            nav={CONSOLE_NAV.student}
+        <ConsolePage
             title="Wallet"
             subtitle="The Stellar wallet your credentials are issued to"
         >
@@ -61,7 +60,7 @@ function StudentWalletContent() {
                     </div>
                 </Card>
             </div>
-        </ConsoleShell>
+        </ConsolePage>
     );
 }
 

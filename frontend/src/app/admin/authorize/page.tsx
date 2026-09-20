@@ -1,21 +1,18 @@
 'use client';
 
 import { ShieldAlert } from 'lucide-react';
-import { ConsoleShell } from '@/components/console/ConsoleShell';
+import { ConsolePage } from '@/components/console/ConsoleShell';
 import { ConnectWalletNotice } from '@/components/admin/ConnectWalletNotice';
 import { AuthorizeIssuer } from '@/components/institution/AuthorizeIssuer';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useContractOwner } from '@/hooks/useContractOwner';
-import { CONSOLE_NAV } from '@/lib/consoleNav';
-import { ProtectedRoute } from '@/contexts/AuthContext';
 
 function AuthorizeContent() {
     const { address, isOwner, isChecking, contractOwner } = useContractOwner();
 
     return (
-        <ConsoleShell
-            nav={CONSOLE_NAV.admin}
+        <ConsolePage
             title="Authorize issuer"
             subtitle="Grant a wallet permission to issue credentials on-chain"
         >
@@ -56,14 +53,12 @@ function AuthorizeContent() {
             ) : (
                 <AuthorizeIssuer />
             )}
-        </ConsoleShell>
+        </ConsolePage>
     );
 }
 
 export default function AdminAuthorizePage() {
     return (
-        <ProtectedRoute allowedRoles={['admin']}>
             <AuthorizeContent />
-        </ProtectedRoute>
     );
 }

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Building2, Check, Copy, Plus, RefreshCw, Search } from 'lucide-react';
 import { toast } from 'sonner';
-import { ConsoleShell } from '@/components/console/ConsoleShell';
+import { ConsolePage } from '@/components/console/ConsoleShell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -28,8 +28,6 @@ import {
     statusBadgeClass,
     type AdminInstitutionSummary,
 } from '@/lib/adminApi';
-import { CONSOLE_NAV } from '@/lib/consoleNav';
-import { ProtectedRoute } from '@/contexts/AuthContext';
 
 function StatusBadge({ status }: { status: string }) {
     return (
@@ -193,8 +191,7 @@ function InstitutionsContent() {
     }, [institutions, query]);
 
     return (
-        <ConsoleShell
-            nav={CONSOLE_NAV.admin}
+        <ConsolePage
             title="Institutions"
             subtitle="Every organisation registered on Acredia"
             actions={
@@ -567,14 +564,12 @@ function InstitutionsContent() {
                     )}
                 </DialogContent>
             </Dialog>
-        </ConsoleShell>
+        </ConsolePage>
     );
 }
 
 export default function AdminInstitutionsPage() {
     return (
-        <ProtectedRoute allowedRoles={['admin']}>
             <InstitutionsContent />
-        </ProtectedRoute>
     );
 }

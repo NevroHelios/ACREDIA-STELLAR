@@ -2,10 +2,10 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ConsoleShell } from '@/components/console/ConsoleShell';
+import { ConsolePage } from '@/components/console/ConsoleShell';
 import { AccountSettingsPanels } from '@/components/settings/AccountSettingsPanels';
 import { RouteStateScreen } from '@/components/route-state/RouteStateScreen';
-import { getConsoleNav } from '@/lib/consoleNav';
+
 import { ProtectedRoute, useAuth } from '@/contexts/AuthContext';
 
 /**
@@ -43,13 +43,12 @@ function SettingsContent() {
     }
 
     return (
-        <ConsoleShell
-            nav={getConsoleNav(userRole)}
+        <ConsolePage
             title="Account settings"
             subtitle="Manage your account preferences and data rights."
         >
             <AccountSettingsPanels />
-        </ConsoleShell>
+        </ConsolePage>
     );
 }
 

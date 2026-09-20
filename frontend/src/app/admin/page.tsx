@@ -13,7 +13,7 @@ import {
     Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { ConsoleShell } from '@/components/console/ConsoleShell';
+import { ConsolePage } from '@/components/console/ConsoleShell';
 import { ConnectWalletNotice } from '@/components/admin/ConnectWalletNotice';
 import { PendingInstitutionsPanel } from '@/components/admin/PendingInstitutionsPanel';
 import { RetentionPanel } from '@/components/admin/RetentionPanel';
@@ -26,8 +26,6 @@ import { debugLog, captureException } from '@/lib/debug';
 import { adminFetch } from '@/lib/adminApi';
 import { runtimeConfig } from '@/lib/runtimeConfig';
 import { useContractOwner } from '@/hooks/useContractOwner';
-import { CONSOLE_NAV } from '@/lib/consoleNav';
-import { ProtectedRoute } from '@/contexts/AuthContext';
 
 interface AdminStats {
     totalInstitutions: number;
@@ -155,8 +153,7 @@ function AdminDashboardContent() {
     const revokedCredentials = Math.max(stats.totalCredentials - stats.activeCredentials, 0);
 
     return (
-        <ConsoleShell
-            nav={CONSOLE_NAV.admin}
+        <ConsolePage
             // No subtitle: the sidebar entry already reads "Overview — System
             // statistics", so a subtitle here would state the same fact a third
             // time in one viewport (ACREDIA-STELLAR#225).
@@ -320,14 +317,12 @@ function AdminDashboardContent() {
                     </div>
                 </div>
             )}
-        </ConsoleShell>
+        </ConsolePage>
     );
 }
 
 export default function AdminDashboardPage() {
     return (
-        <ProtectedRoute allowedRoles={['admin']}>
             <AdminDashboardContent />
-        </ProtectedRoute>
     );
 }
