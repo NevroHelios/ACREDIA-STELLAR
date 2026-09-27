@@ -17,13 +17,21 @@ const webServerEnv = {
     ADMIN_EMAIL_ALLOWLIST: 'admin@acredia.test',
 };
 
-// Allow overriding the dev-server port so a local project already listening on
-// 3000 can't be picked up by `reuseExistingServer` and audited by mistake.
-const PORT = process.env.PLAYWRIGHT_PORT ?? '3000';
+// Deliberately not 3000: that port is shared with roughly every other web
+// project on a developer's machine, and `reuseExistingServer` would happily
+// attach to one of them and audit it as if it were Acredia
+// (ACREDIA-STELLAR#271). 3199 is unremarkable enough to be free and
+// project-specific enough to stay that way; `PLAYWRIGHT_PORT` overrides it
+// when even that collides.
+const PORT = process.env.PLAYWRIGHT_PORT ?? '3199';
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 export default defineConfig({
     testDir: './tests/playwright',
+    // Runs before any spec and refuses to continue unless the base URL is
+    // actually serving Acredia. The port default above makes a collision
+    // unlikely; this makes an undetected one impossible.
+    globalSetup: './tests/playwright/global-setup.ts',
     fullyParallel: false,
     workers: 1,
     retries: 0,
@@ -38,7 +46,11 @@ export default defineConfig({
     webServer: {
         command: `npm run dev -- --port ${PORT}`,
         url: BASE_URL,
-        reuseExistingServer: true,
+        // CI always starts its own server: a reused one there could only come
+        // from a leaked process on a shared runner, which is never what we
+        // want to audit. Locally, reuse stays on for the fast edit-run loop —
+        // the identity guard above is what makes that safe.
+        reuseExistingServer: !process.env.CI,
         timeout: 120_000,
         env: webServerEnv,
     },
