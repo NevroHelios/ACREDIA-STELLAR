@@ -20,6 +20,7 @@ import {
     type BatchIssuanceSummary,
 } from '@/lib/batchCredentialService';
 import { captureException } from '@/lib/debug';
+import { useStellarAccount } from '@/contexts/StellarContext';
 
 interface BatchCredentialImportProps {
     institutionId: string;
@@ -47,6 +48,10 @@ export function BatchCredentialImport({
     account,
     onSuccess,
 }: BatchCredentialImportProps) {
+    // The signer comes from the wallet context rather than being threaded down
+    // as a prop: `account` is still needed for the disabled states below, but
+    // signing is the context's business (ACREDIA-STELLAR#3).
+    const { signer } = useStellarAccount();
     const [phase, setPhase] = useState<Phase>('select');
     const [fileName, setFileName] = useState<string | null>(null);
     const [parseErrors, setParseErrors] = useState<string[]>([]);
@@ -99,7 +104,10 @@ export function BatchCredentialImport({
     };
 
     const handleIssue = async (rows: CsvCredentialRow[]) => {
-        if (!account) {
+        // Guards on the signer rather than the address: the signer is what
+        // issuance actually needs, and it is null in exactly the cases where
+        // there is nothing to sign with.
+        if (!signer) {
             toast.error('Please connect your wallet first');
             return;
         }
@@ -114,7 +122,7 @@ export function BatchCredentialImport({
         try {
             const result = await issueBatchCredentials(
                 rows,
-                { institutionId, institutionName, institutionWallet, issuerAddress: account },
+                { institutionId, institutionName, institutionWallet, issuer: signer },
                 setProgress,
             );
 

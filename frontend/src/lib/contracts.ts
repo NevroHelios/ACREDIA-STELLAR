@@ -13,8 +13,8 @@ import { activeNetwork, getContractAddress, sorobanServer } from './stellar';
 import { debugLog, debugWarn, captureException } from './debug';
 import { generateCanonicalCredentialHash } from './credentialHash';
 import { credentialHashHexToScVal } from './credentialHashEncoding';
-import { getE2eState, updateE2eState } from './e2e';
-import { walletAdapter, WalletUserRejectedError } from './wallet';
+import { e2eLedgerReads, e2eLedgerWrites, isE2eSigner } from './e2eLedger';
+import type { StellarSigner } from './stellarSigner';
 
 export interface CredentialMetadata {
     studentAddress: string;
@@ -57,12 +57,20 @@ async function waitForConfirmation(hash: string, maxAttempts = 20): Promise<unkn
     throw new Error(`Transaction ${hash} not confirmed after ${maxAttempts} attempts`);
 }
 
-async function invokeContractMethod(
+/**
+ * Builds, simulates, signs and submits one contract call.
+ *
+ * Exported for tests: with a keypair signer this runs end-to-end against a
+ * stubbed RPC, with no browser and no wallet extension involved
+ * (ACREDIA-STELLAR#3).
+ */
+export async function invokeContractMethod(
     contractId: string,
     method: string,
     args: xdr.ScVal[],
-    signerAddress: string,
+    signer: StellarSigner,
 ): Promise<ContractInvocationResult> {
+    const signerAddress = signer.address;
     const contract = new Contract(contractId);
     const sourceAccount = await sorobanServer.getAccount(signerAddress);
 
@@ -95,23 +103,25 @@ async function invokeContractMethod(
     debugLog(`Preparing contract method "${method}".`);
     const preparedTx = await sorobanServer.prepareTransaction(transaction as never);
 
-    debugLog('Requesting signature from the connected wallet.');
+    debugLog('Requesting signature from the signer.');
     let finalXdr: string;
     try {
-        // The adapter normalises every wallet's response down to a signed XDR
-        // string, so the shape-guessing this function used to do
-        // (`signedTxXdr` vs. a bare string vs. `Object.values(...)[0]`) now
-        // lives in one place instead of at every call site.
-        finalXdr = await walletAdapter.signTransaction(preparedTx.toXDR(), {
+        // Whoever holds the key — a browser wallet, a keypair in a keeper
+        // process, a test — answers the same way: a signed XDR string. This
+        // module no longer knows or cares which.
+        finalXdr = await signer.signTransaction(preparedTx.toXDR(), {
             networkPassphrase: activeNetwork.networkPassphrase,
-            address: signerAddress,
         });
     } catch (signError: unknown) {
-        if (signError instanceof WalletUserRejectedError) {
+        const msg = signError instanceof Error ? signError.message : String(signError);
+
+        // Matched on the message rather than on an error class, so this module
+        // stays free of wallet imports. The wallet signer raises
+        // `WalletUserRejectedError`, whose message says "canceled".
+        if (/cancel|reject|denied|declined/i.test(msg)) {
             throw new Error('Transaction signing was canceled by the user.', { cause: signError });
         }
 
-        const msg = signError instanceof Error ? signError.message : String(signError);
         if (
             msg.includes('Network') ||
             msg.includes('network') ||
@@ -125,7 +135,7 @@ async function invokeContractMethod(
                 { cause: signError },
             );
         }
-        throw new Error(`Wallet signing error: ${msg}`, { cause: signError });
+        throw new Error(`Signing error: ${msg}`, { cause: signError });
     }
 
     const signedTx = TransactionBuilder.fromXDR(finalXdr, activeNetwork.networkPassphrase);
@@ -246,11 +256,16 @@ async function simulateRead(
     return getSorobanTransactionResult(sim);
 }
 
+/**
+ * Reads the contract owner.
+ *
+ * Takes an address rather than a signer: this only simulates, never submits,
+ * and one caller is a server route with no wallet at all. A signer here would
+ * be a dependency nobody could satisfy.
+ */
 export async function getContractOwner(callerAddress: string): Promise<string> {
-    const e2eState = getE2eState();
-    if (e2eState?.enabled && e2eState.contractOwner) {
-        return e2eState.contractOwner;
-    }
+    const seeded = e2eLedgerReads.contractOwner();
+    if (seeded) return seeded;
 
     const contractId = getContractAddress('CREDENTIAL_NFT');
     if (!contractId) {
@@ -267,20 +282,13 @@ export async function getContractOwner(callerAddress: string): Promise<string> {
     }
 }
 
+/** Reads an issuer's authorization. Read-only, so it takes an address, not a signer. */
 export async function isAuthorizedIssuer(
     issuerAddress: string,
     callerAddress: string,
 ): Promise<boolean> {
-    const e2eState = getE2eState();
-    if (e2eState?.enabled) {
-        return Boolean(
-            (e2eState.contractOwner &&
-                issuerAddress.toLowerCase() === e2eState.contractOwner.toLowerCase()) ||
-                e2eState.authorizedIssuers?.some(
-                    (value) => value.toLowerCase() === issuerAddress.toLowerCase(),
-                ),
-        );
-    }
+    const seeded = e2eLedgerReads.isAuthorizedIssuer(issuerAddress);
+    if (seeded !== null) return seeded;
 
     const contractId = getContractAddress('CREDENTIAL_NFT');
 
@@ -299,27 +307,16 @@ export async function isAuthorizedIssuer(
 }
 
 export async function authorizeIssuer(
-    adminAddress: string,
+    admin: StellarSigner,
     issuerAddress: string,
 ): Promise<string> {
-    const e2eState = getE2eState();
-    if (e2eState?.enabled) {
-        updateE2eState((state) => {
-            state.contractOwner = state.contractOwner || adminAddress;
-            state.authorizedIssuers ??= [];
-            if (!state.authorizedIssuers.includes(issuerAddress)) {
-                state.authorizedIssuers.push(issuerAddress);
-            }
-            if (state.stats) {
-                state.stats.authorizedInstitutions = state.authorizedIssuers.length;
-            }
-        });
-        return 'e2e-authorize-tx';
+    if (isE2eSigner(admin)) {
+        return e2eLedgerWrites.authorizeIssuer(admin.address, issuerAddress);
     }
 
     const contractId = getContractAddress('CREDENTIAL_NFT');
     const args = [new Address(issuerAddress).toScVal()];
-    const result = await invokeContractMethod(contractId, 'authorize_issuer', args, adminAddress);
+    const result = await invokeContractMethod(contractId, 'authorize_issuer', args, admin);
     return result.transactionHash;
 }
 
@@ -327,30 +324,12 @@ export async function issueCredentialOnStellar(
     studentAddress: string,
     credentialHash: string,
     ipfsUri: string,
-    issuerAddress: string,
+    issuer: StellarSigner,
 ): Promise<{ tokenId: string; transactionHash: string }> {
-    const e2eState = getE2eState();
-    if (e2eState?.enabled) {
-        const authorized = Boolean(
-            (e2eState.contractOwner &&
-                issuerAddress.toLowerCase() === e2eState.contractOwner.toLowerCase()) ||
-                e2eState.authorizedIssuers?.some(
-                    (value) => value.toLowerCase() === issuerAddress.toLowerCase(),
-                ),
-        );
-        if (!authorized) {
-            throw new Error('Your wallet is not authorized to issue credentials.');
-        }
+    const issuerAddress = issuer.address;
 
-        const tokenId = String(e2eState.nextTokenId ?? 1);
-        updateE2eState((state) => {
-            state.nextTokenId = (state.nextTokenId ?? 1) + 1;
-        });
-
-        return {
-            tokenId,
-            transactionHash: `e2e-tx-${tokenId}`,
-        };
+    if (isE2eSigner(issuer)) {
+        return e2eLedgerWrites.issueCredential(issuerAddress);
     }
 
     debugLog('Issuing credential on Stellar.');
@@ -372,7 +351,7 @@ export async function issueCredentialOnStellar(
         nativeToScVal(ipfsUri, { type: 'string' }),
     ];
 
-    const result = await invokeContractMethod(contractId, 'issue_credential', args, issuerAddress);
+    const result = await invokeContractMethod(contractId, 'issue_credential', args, issuer);
     const tokenId = normalizeTokenId(result.returnValue);
 
     // eslint-disable-next-line no-console
@@ -474,7 +453,7 @@ function normalizeBatchIssueRow(row: unknown, fallbackIndex: number): BatchIssue
  */
 export async function batchIssueCredentialOnStellar(
     items: BatchCredentialInputItem[],
-    issuerAddress: string,
+    issuer: StellarSigner,
 ): Promise<BatchIssueOutcome> {
     if (items.length === 0) {
         throw new Error('Cannot issue an empty batch.');
@@ -485,30 +464,20 @@ export async function batchIssueCredentialOnStellar(
         );
     }
 
-    const e2eState = getE2eState();
-    if (e2eState?.enabled) {
-        const authorized = Boolean(
-            (e2eState.contractOwner &&
-                issuerAddress.toLowerCase() === e2eState.contractOwner.toLowerCase()) ||
-                e2eState.authorizedIssuers?.some(
-                    (value) => value.toLowerCase() === issuerAddress.toLowerCase(),
-                ),
-        );
-        if (!authorized) {
-            throw new Error('Your wallet is not authorized to issue credentials.');
-        }
+    const issuerAddress = issuer.address;
 
-        const startId = e2eState.nextTokenId ?? 1;
+    if (isE2eSigner(issuer)) {
+        const { transactionHash, startTokenId } = e2eLedgerWrites.batchIssueCredential(
+            issuerAddress,
+            items.length,
+        );
         const results: BatchIssueRowResult[] = items.map((_, index) => ({
             index,
             success: true,
-            tokenId: String(startId + index),
+            tokenId: String(startTokenId + index),
             errorCode: null,
         }));
-        updateE2eState((state) => {
-            state.nextTokenId = startId + items.length;
-        });
-        return { transactionHash: `e2e-batch-tx-${startId}`, results };
+        return { transactionHash, results };
     }
 
     debugLog('Issuing credential batch on Stellar.');
@@ -526,12 +495,7 @@ export async function batchIssueCredentialOnStellar(
     const itemsScVal = xdr.ScVal.scvVec(items.map(batchCredentialInputToScVal));
     const args = [new Address(issuerAddress).toScVal(), itemsScVal];
 
-    const result = await invokeContractMethod(
-        contractId,
-        'batch_issue_credential',
-        args,
-        issuerAddress,
-    );
+    const result = await invokeContractMethod(contractId, 'batch_issue_credential', args, issuer);
 
     const rawRows = Array.isArray(result.returnValue) ? result.returnValue : [];
     const results = rawRows.map((row, index) => normalizeBatchIssueRow(row, index));
@@ -548,10 +512,13 @@ export async function batchIssueCredentialOnStellar(
 
 export async function revokeCredentialOnStellar(
     tokenId: string,
-    issuerAddress: string,
+    issuer: StellarSigner,
 ): Promise<string> {
-    if (getE2eState()?.enabled) {
-        return `e2e-revoke-${normalizeTokenId(tokenId)}`;
+    if (isE2eSigner(issuer)) {
+        // Validated even on the fake path: the suite asserts that a malformed
+        // token id is rejected, and a fake that accepted anything would let
+        // that regression through.
+        return e2eLedgerWrites.revokeCredential(normalizeTokenId(tokenId));
     }
 
     // eslint-disable-next-line no-console
@@ -561,10 +528,10 @@ export async function revokeCredentialOnStellar(
 
     const args = [
         nativeToScVal(Number(validatedTokenId), { type: 'u64' }),
-        new Address(issuerAddress).toScVal(),
+        new Address(issuer.address).toScVal(),
     ];
 
-    const result = await invokeContractMethod(contractId, 'revoke_credential', args, issuerAddress);
+    const result = await invokeContractMethod(contractId, 'revoke_credential', args, issuer);
     // eslint-disable-next-line no-console
     console.log('✅ Credential revoked on Stellar Network. Tx:', result.transactionHash);
     return result.transactionHash;

@@ -13,7 +13,7 @@ import { safeGetSession } from '@/lib/supabase';
 import { useStellarAccount } from '@/contexts/StellarContext';
 
 export function AuthorizeIssuer() {
-    const { address } = useStellarAccount();
+    const { address, signer } = useStellarAccount();
     const [walletToAuthorize, setWalletToAuthorize] = useState('');
     const [isAuthorizing, setIsAuthorizing] = useState(false);
     const [isChecking, setIsChecking] = useState(false);
@@ -94,7 +94,12 @@ export function AuthorizeIssuer() {
                 return;
             }
 
-            const hash = await authorizeIssuer(address, walletToAuthorize);
+            if (!signer) {
+                toast.error('Connect your wallet to authorize', { id: 'authorize' });
+                return;
+            }
+
+            const hash = await authorizeIssuer(signer, walletToAuthorize);
             toast.success('Wallet authorized successfully!', { id: 'authorize' });
             toast.success(`Transaction: ${hash.slice(0, 10)}...`);
 

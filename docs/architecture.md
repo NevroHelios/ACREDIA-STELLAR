@@ -134,6 +134,56 @@ which covers Freighter, xBull, Albedo, Rabet, Lobstr, Hana, HOT, Klever, OneKey
 and Bitget. The supported-wallet matrix, including which wallets can complete
 the `/claim` flow, is in the [README](../README.md#-supported-wallets).
 
+### The signing seam
+
+Contract calls take a **signer**, not an address (ACREDIA-STELLAR#3).
+`src/lib/contracts.ts` builds, simulates and submits Soroban transactions; who
+holds the key is a separate concern:
+
+```ts
+export interface StellarSigner {
+    readonly address: string;
+    signTransaction(xdr: string, opts: { networkPassphrase: string }): Promise<string>;
+    signMessage?(message: string, opts: { networkPassphrase: string }): Promise<string>;
+}
+```
+
+Four implementations, in `src/lib/stellarSigner.ts` unless noted:
+
+| Signer | Used by |
+| --- | --- |
+| `createWalletSigner` (`src/lib/wallet/signer.ts`) | The browser. The only bridge from the wallet layer to this interface. |
+| `createKeypairSigner` | Tests, and any future server-side keeper or relayer. Signs locally — no prompt, no extension. |
+| `createE2eSigner` (`src/lib/e2eLedger.ts`) | The Playwright suite. |
+| `createReadOnlySigner` | Contexts that must name an address but hold no key. Throws rather than returning an unsigned transaction. |
+
+`contracts.ts` previously imported `signTransaction` from
+`@stellar/freighter-api` at line 1, which cost three things:
+
+- **`invokeContractMethod` was untestable.** Reaching it meant stubbing a browser
+  extension, so `contracts.test.ts` could only cover the pure helpers around it —
+  leaving the build → simulate → sign → submit → confirm sequence unexercised.
+  It is now covered end-to-end in
+  [`tests/contractsInvoke.test.ts`](../frontend/tests/contractsInvoke.test.ts)
+  with a keypair signer and a stubbed RPC.
+- **Six duplicated E2E forks.** Every exported function opened with a
+  `getE2eState()` early return that re-implemented the logic it was bypassing —
+  authorization checks in three places, token-id sequencing in two. Two
+  implementations of the same rules, only one of them real. They now collapse
+  into `src/lib/e2eLedger.ts`: the writing functions check `isE2eSigner(signer)`,
+  and authorization is decided in exactly one function.
+- **Server-side signing was impossible** without editing the module.
+
+Read-only functions (`getContractOwner`, `isAuthorizedIssuer`) deliberately keep
+taking a plain address. They only simulate, and one caller is a server API route
+with no wallet at all — a signer there would be a dependency nothing could
+satisfy. Their E2E branches route through `e2eLedgerReads` instead, which returns
+`null` (not `false`) when E2E is off so callers fall through to the real ledger.
+
+`contracts.ts` now imports no wallet SDK and never calls `getE2eState`; both are
+asserted in
+[`tests/e2eLedger.test.ts`](../frontend/tests/e2eLedger.test.ts).
+
 ### Why there is an adapter
 
 Acredia previously supported exactly one wallet, and the reason was structural:
@@ -146,13 +196,19 @@ promise is universal, lifelong access (ACREDIA-STELLAR#272).
 The fix is a boundary, not just a library swap:
 
 ```
-UI / contexts / pages  ──►  WalletAdapter (src/lib/wallet/types.ts)
-                                    │
-                            src/lib/wallet/index.ts   ← E2E short-circuit
-                                    │
-                            src/lib/wallet/adapter.ts ← the ONLY kit importer
-                                    │
-                            @creit.tech/stellar-wallets-kit
+contracts.ts ──► StellarSigner  (src/lib/stellarSigner.ts)
+                      ▲   ▲
+                      │   └── createKeypairSigner / createE2eSigner
+                      │
+UI / contexts ──► createWalletSigner (src/lib/wallet/signer.ts)
+                      │
+                  WalletAdapter (src/lib/wallet/types.ts)
+                      │
+                  src/lib/wallet/index.ts    ← E2E short-circuit
+                      │
+                  src/lib/wallet/adapter.ts  ← the ONLY kit importer
+                      │
+                  @creit.tech/stellar-wallets-kit
 ```
 
 `src/lib/wallet/` is the only place a wallet library may be imported.

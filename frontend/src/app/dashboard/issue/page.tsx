@@ -19,7 +19,6 @@ function IssueCredentialContent() {
                     institutionId={profile.institutionId}
                     institutionName={profile.institutionName}
                     institutionWallet={profile.institutionWallet}
-                    account={profile.address}
                     onSuccess={() =>
                         toast.success('Credential issued — find it under Issued credentials.')
                     }
