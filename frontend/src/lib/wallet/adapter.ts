@@ -23,7 +23,10 @@
  */
 
 import { activeNetwork } from '@/lib/stellar';
+import { debugWarn } from '@/lib/debug';
+import { runtimeConfig } from '@/lib/runtimeConfig';
 import { capabilitiesFor, WALLET_IDS } from './capabilities';
+import { isMobileBrowser } from './platform';
 import { ensureModalA11y } from './modalA11y';
 import { buildWalletModalTheme } from './theme';
 import {
@@ -57,6 +60,9 @@ const WALLET_NAMES: Record<string, string> = {
     [WALLET_IDS.KLEVER]: 'Klever',
     [WALLET_IDS.ONEKEY]: 'OneKey',
     [WALLET_IDS.BITGET]: 'Bitget Wallet',
+    // Named for what the student actually does, not for the protocol: on a
+    // phone they scan a code with their wallet app (ACREDIA-STELLAR#4).
+    [WALLET_IDS.WALLET_CONNECT]: 'Mobile wallet (scan QR)',
 };
 
 export function walletNameFor(walletId: string): string {
@@ -132,6 +138,58 @@ type Kit = typeof import('@creit.tech/stellar-wallets-kit').StellarWalletsKit;
  */
 let kitPromise: Promise<Kit> | null = null;
 
+/**
+ * Builds the WalletConnect module, or null when it is not configured.
+ *
+ * This is the only wallet a phone can reach (ACREDIA-STELLAR#4): every other
+ * supported wallet is a desktop browser extension, so without this the mobile
+ * wallet list is effectively empty.
+ *
+ * The project id is deployment configuration rather than code, so its absence
+ * is a normal state, not an error — the module is simply not registered, and
+ * the UI explains the gap instead of listing a wallet that cannot connect.
+ * Loaded separately from the others so its WalletConnect/Reown dependencies
+ * stay out of the bundle entirely when unconfigured.
+ */
+async function loadWalletConnectModule() {
+    const { projectId, appName, appUrl } = runtimeConfig.walletConnect;
+    if (!projectId) return null;
+
+    try {
+        const { WalletConnectModule, WalletConnectTargetChain } = await import(
+            '@creit.tech/stellar-wallets-kit/modules/wallet-connect'
+        );
+
+        // The module defaults `allowedChains` to PUBLIC. Leaving that alone on
+        // a testnet deployment would ask the wallet to approve a mainnet
+        // session, so the chain is derived from the app's own network — the
+        // same rule as everywhere else: never a hardcoded network.
+        const chain =
+            kitNetwork() === NETWORK_PASSPHRASES.PUBLIC
+                ? WalletConnectTargetChain.PUBLIC
+                : WalletConnectTargetChain.TESTNET;
+
+        return new WalletConnectModule({
+            projectId,
+            // Shown in the wallet while the student approves the session, so
+            // these have to be the real app identity — a placeholder here reads
+            // as phishing at the moment trust matters most.
+            metadata: {
+                name: appName,
+                description: 'Blockchain academic credentials on Stellar',
+                url: appUrl,
+                icons: [`${appUrl.replace(/\/$/, '')}/logo.png`],
+            },
+            allowedChains: [chain],
+        });
+    } catch (error) {
+        // A misconfigured project id must degrade to "no WalletConnect",
+        // never to "the Connect button throws".
+        debugWarn('WalletConnect could not be initialised.', error);
+        return null;
+    }
+}
+
 async function loadKit(): Promise<Kit> {
     const [
         { StellarWalletsKit },
@@ -161,26 +219,48 @@ async function loadKit(): Promise<Kit> {
         import('@creit.tech/stellar-wallets-kit/modules/bitget'),
     ]);
 
+    // Loaded after the others so an unconfigured/failed WalletConnect cannot
+    // stop the extension wallets from being registered.
+    const walletConnect = await loadWalletConnectModule();
+
+    const mobile = isMobileBrowser();
+
+    // Desktop extensions are not registered at all on a phone. Registering them
+    // would fill the modal with rows reading "Install" beside wallets that
+    // cannot be installed on that device — the dead end this issue is about,
+    // just relocated into the modal (ACREDIA-STELLAR#4).
+    const extensionModules = mobile
+        ? []
+        : [
+              new FreighterModule(),
+              new xBullModule(),
+              new RabetModule(),
+              new LobstrModule(),
+              new HanaModule(),
+              new HotWalletModule(),
+              new KleverModule(),
+              new OneKeyModule(),
+              new BitgetModule(),
+          ];
+
     StellarWalletsKit.init({
         network: kitNetwork() as Parameters<typeof StellarWalletsKit.init>[0]['network'],
         selectedWalletId: readStoredWalletId() ?? undefined,
         modules: [
-            new FreighterModule(),
-            new xBullModule(),
+            // First in the list so it is the top option on a phone, where it is
+            // the only one that can work.
+            ...(walletConnect ? [walletConnect] : []),
+            // Web-based, so it loads on any device. It cannot sign messages,
+            // which `/claim` gates on separately.
             new AlbedoModule(),
-            new RabetModule(),
-            new LobstrModule(),
-            new HanaModule(),
-            new HotWalletModule(),
-            new KleverModule(),
-            new OneKeyModule(),
-            new BitgetModule(),
+            ...extensionModules,
         ],
         authModal: {
-            // Wallets the user cannot actually use are shown with an install
-            // link rather than hidden, so "my wallet isn't listed" has an
-            // answer on the screen where the question occurs.
-            showInstallLabel: true,
+            // On desktop, an unavailable wallet is shown with an install link so
+            // "my wallet isn't listed" has an answer where the question occurs.
+            // On mobile nothing in the list is installable, so the label would
+            // be an instruction the device cannot follow.
+            showInstallLabel: !mobile,
         },
     });
 

@@ -39,7 +39,16 @@ export const WALLET_IDS = {
     WALLET_CONNECT: 'wallet_connect',
 } as const;
 
-/** Wallet ids that reject `signMessage` at runtime despite typing it. */
+/**
+ * Wallet ids that reject `signMessage` at runtime despite typing it.
+ *
+ * WalletConnect is deliberately absent: it requests `stellar_signMessage` as an
+ * optional namespace, so whether it works depends on the wallet app the student
+ * scans with rather than on the transport. Treating it as capable is what lets a
+ * phone reach `/claim` at all (ACREDIA-STELLAR#4); a wallet app that declines
+ * the method surfaces as the kit's -3 rejection, which the adapter already maps
+ * back to a capability error naming the wallet.
+ */
 const NO_MESSAGE_SIGNING: ReadonlySet<string> = new Set([
     WALLET_IDS.ALBEDO,
     WALLET_IDS.RABET,

@@ -14,7 +14,14 @@ import { captureException } from '@/lib/debug';
 import { getE2eState } from '@/lib/e2e';
 import { createE2eSigner } from '@/lib/e2eLedger';
 import type { StellarSigner } from '@/lib/stellarSigner';
-import { WalletUserRejectedError, walletAdapter, type WalletCapabilities } from '@/lib/wallet';
+import {
+    WalletUserRejectedError,
+    isMobileBrowser,
+    isMobileCapable,
+    capabilitiesFor,
+    walletAdapter,
+    type WalletCapabilities,
+} from '@/lib/wallet';
 import { createWalletSigner } from '@/lib/wallet/signer';
 
 interface StellarContextType {
@@ -33,6 +40,31 @@ interface StellarContextType {
      * exactly one place instead of being branched on inside `contracts.ts`.
      */
     signer: StellarSigner | null;
+    /**
+     * Whether this is a phone (ACREDIA-STELLAR#4).
+     *
+     * Nine of the ten supported wallets are desktop browser extensions, so the
+     * honest set of options differs by device. Resolved once here rather than
+     * sniffed in each component, and after mount so server and client render
+     * the same markup.
+     */
+    isMobile: boolean;
+    /**
+     * True when the device has no wallet it can actually use — a phone with
+     * WalletConnect unconfigured. The UI explains the gap instead of opening a
+     * modal listing extensions that cannot be installed there.
+     */
+    hasNoUsableWallet: boolean;
+    /**
+     * True when the device can connect a wallet but none of the reachable ones
+     * can sign a *message*, which is the only thing `/claim` needs.
+     *
+     * Distinct from {@link hasNoUsableWallet} because it is a narrower failure:
+     * on a phone with WalletConnect unconfigured, Albedo still connects and can
+     * sign transactions — so the Connect button works — but a student cannot
+     * prove wallet ownership and therefore cannot claim. Only `/claim` cares.
+     */
+    hasNoMessageSigningWallet: boolean;
     isConnecting: boolean;
     connect: () => Promise<void>;
     disconnect: () => void;
@@ -44,6 +76,9 @@ const StellarContext = createContext<StellarContextType>({
     walletName: null,
     capabilities: null,
     signer: null,
+    isMobile: false,
+    hasNoUsableWallet: false,
+    hasNoMessageSigningWallet: false,
     isConnecting: false,
     connect: async () => {},
     disconnect: () => {},
@@ -55,6 +90,50 @@ export const StellarProvider = ({ children }: { children: React.ReactNode }) => 
     const [walletName, setWalletName] = useState<string | null>(null);
     const [capabilities, setCapabilities] = useState<WalletCapabilities | null>(null);
     const [isConnecting, setIsConnecting] = useState(false);
+    // Starts false and is resolved after mount: reading the user agent during
+    // render would make the server and client markup disagree and trip
+    // hydration. Until it resolves the UI shows the desktop path, which is the
+    // less restrictive default.
+    const [isMobile, setIsMobile] = useState(false);
+    const [hasNoUsableWallet, setHasNoUsableWallet] = useState(false);
+    const [hasNoMessageSigningWallet, setHasNoMessageSigningWallet] = useState(false);
+
+    useEffect(() => {
+        const mobile = isMobileBrowser();
+        setIsMobile(mobile);
+
+        if (!mobile) return;
+        let cancelled = false;
+
+        // On a phone, work out up front whether anything here can actually
+        // connect. Nine of the ten wallets are desktop extensions, so without
+        // WalletConnect configured the answer is no — and the user deserves to
+        // be told that instead of tapping into a modal full of install links
+        // for software that does not exist on their device.
+        void (async () => {
+            try {
+                const wallets = await walletAdapter.listWallets();
+                if (cancelled) return;
+
+                const reachable = wallets.filter((wallet) => isMobileCapable(wallet.id));
+                setHasNoUsableWallet(reachable.length === 0);
+
+                // `/claim` proves ownership with a message signature. Albedo is
+                // reachable on a phone but cannot sign messages, so "can
+                // connect" and "can claim" are genuinely different answers here.
+                setHasNoMessageSigningWallet(
+                    !reachable.some((wallet) => capabilitiesFor(wallet.id).signMessage),
+                );
+            } catch {
+                // Listing failed; leave the Connect button alone rather than
+                // blocking it on a diagnostic that did not run.
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     useEffect(() => {
         let cancelled = false;
@@ -149,6 +228,9 @@ export const StellarProvider = ({ children }: { children: React.ReactNode }) => 
                 walletName,
                 capabilities,
                 signer,
+                isMobile,
+                hasNoUsableWallet,
+                hasNoMessageSigningWallet,
                 isConnecting,
                 connect,
                 disconnect,

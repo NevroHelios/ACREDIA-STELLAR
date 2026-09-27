@@ -1,12 +1,22 @@
 'use client';
 
+import { useState } from 'react';
 import { Copy, LogOut, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { useStellarAccount } from '@/contexts/StellarContext';
+import { MobileWalletNotice } from '@/components/wallet/MobileWalletNotice';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from './dialog';
 import { Button } from './button';
 
 export function ConnectWallet() {
-    const { address, isConnecting, connect, disconnect, walletName } = useStellarAccount();
+    const { address, isConnecting, connect, disconnect, walletName, hasNoUsableWallet } =
+        useStellarAccount();
+    const [noticeOpen, setNoticeOpen] = useState(false);
 
     if (address) {
         return (
@@ -38,6 +48,30 @@ export function ConnectWallet() {
                     <LogOut className="h-4 w-4" />
                 </button>
             </div>
+        );
+    }
+
+    // On a phone with no reachable wallet, the button explains the situation
+    // instead of opening a modal listing desktop extensions
+    // (ACREDIA-STELLAR#4). It stays enabled: a disabled control with no
+    // explanation is the dead end this issue is about.
+    if (hasNoUsableWallet) {
+        return (
+            <>
+                <Button variant="outline" onClick={() => setNoticeOpen(true)}>
+                    <Wallet className="h-4 w-4" />
+                    Wallet options
+                </Button>
+
+                <Dialog open={noticeOpen} onOpenChange={setNoticeOpen}>
+                    <DialogContent className="max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Connect a wallet</DialogTitle>
+                        </DialogHeader>
+                        <MobileWalletNotice className="text-sm text-foreground" />
+                    </DialogContent>
+                </Dialog>
+            </>
         );
     }
 
