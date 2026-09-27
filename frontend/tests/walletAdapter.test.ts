@@ -74,12 +74,42 @@ const TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
  * Stellar SDK RPC server at module scope, which drags in axios and fails
  * against the synthetic `window` below.
  */
-function installMocks(networkPassphrase = TESTNET_PASSPHRASE) {
+function installMocks(
+    networkPassphrase = TESTNET_PASSPHRASE,
+    { walletConnectProjectId = null as string | null } = {},
+) {
     vi.doMock(KIT_PATH, () => ({ StellarWalletsKit: kitMock }));
     stubWalletModules();
     vi.doMock('@/lib/stellar', () => ({
         activeNetwork: { networkPassphrase, networkName: 'testnet' },
     }));
+    vi.doMock('@/lib/runtimeConfig', () => ({
+        runtimeConfig: {
+            walletConnect: {
+                projectId: walletConnectProjectId,
+                appName: 'Acredia',
+                appUrl: 'https://acredia.test',
+            },
+        },
+    }));
+    vi.doMock('@/lib/debug', () => ({
+        debugWarn: vi.fn(),
+        debugLog: vi.fn(),
+        captureException: vi.fn(),
+    }));
+    vi.doMock(`${KIT_PATH}/modules/wallet-connect`, () => ({
+        WalletConnectModule: class {
+            productId = 'wallet_connect';
+            constructor(public params: unknown) {}
+        },
+        WalletConnectTargetChain: { PUBLIC: 'stellar:pubnet', TESTNET: 'stellar:testnet' },
+    }));
+}
+
+/** The module ids the adapter registered, in order. */
+function registeredModuleIds(): string[] {
+    const init = kitMock.init.mock.calls[0]?.[0] as { modules: Array<{ productId: string }> };
+    return init.modules.map((module) => module.productId);
 }
 
 beforeEach(() => {
@@ -112,6 +142,134 @@ async function loadAdapter() {
     const mod = await import('../src/lib/wallet/adapter');
     return mod;
 }
+
+/** Makes `isMobileBrowser()` report a phone for the current test. */
+function pretendMobile() {
+    vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (Linux; Android 13; Pixel 7)', maxTouchPoints: 5 });
+}
+
+describe('module registration by device', () => {
+    it('registers every wallet on desktop', async () => {
+        const { stellarKitAdapter } = await loadAdapter();
+        await stellarKitAdapter.connect();
+
+        const ids = registeredModuleIds();
+        expect(ids).toContain('freighter');
+        expect(ids).toContain('albedo');
+        expect(ids).toContain('bitget');
+    });
+
+    it('shows install links on desktop but not on mobile', async () => {
+        const { stellarKitAdapter } = await loadAdapter();
+        await stellarKitAdapter.connect();
+
+        // On desktop "install" is a real next step; on a phone it is an
+        // instruction the device cannot follow (ACREDIA-STELLAR#4).
+        expect(kitMock.init.mock.calls[0]?.[0]).toMatchObject({
+            authModal: { showInstallLabel: true },
+        });
+    });
+
+    it('registers no desktop extensions on a phone', async () => {
+        pretendMobile();
+        const { stellarKitAdapter } = await loadAdapter();
+        await stellarKitAdapter.connect();
+
+        // Registering them would fill the modal with rows reading "Install"
+        // beside wallets that cannot exist on that device — the same dead end,
+        // relocated into the modal.
+        expect(registeredModuleIds()).toEqual(['albedo']);
+        expect(kitMock.init.mock.calls[0]?.[0]).toMatchObject({
+            authModal: { showInstallLabel: false },
+        });
+    });
+});
+
+describe('WalletConnect registration', () => {
+    it('is absent when no project id is configured', async () => {
+        // Deployment configuration, not an error: its absence must leave a
+        // clean list rather than a broken entry.
+        const { stellarKitAdapter } = await loadAdapter();
+        await stellarKitAdapter.connect();
+
+        expect(registeredModuleIds()).not.toContain('wallet_connect');
+    });
+
+    it('leads the list once configured, so a phone sees it first', async () => {
+        vi.resetModules();
+        installMocks(TESTNET_PASSPHRASE, { walletConnectProjectId: 'wc-project-id' });
+        pretendMobile();
+
+        const { stellarKitAdapter } = await import('../src/lib/wallet/adapter');
+        await stellarKitAdapter.connect();
+
+        // First, because on a phone it is the only option that can complete
+        // `/claim`.
+        expect(registeredModuleIds()).toEqual(['wallet_connect', 'albedo']);
+    });
+
+    it('asks the wallet to approve the app’s own network, not the kit default', async () => {
+        vi.resetModules();
+        installMocks(TESTNET_PASSPHRASE, { walletConnectProjectId: 'wc-project-id' });
+
+        const { stellarKitAdapter } = await import('../src/lib/wallet/adapter');
+        await stellarKitAdapter.connect();
+
+        // The module defaults `allowedChains` to PUBLIC. Left alone, a testnet
+        // deployment would ask for a mainnet session.
+        const init = kitMock.init.mock.calls[0]?.[0] as {
+            modules: Array<{ productId: string; params?: { allowedChains?: string[] } }>;
+        };
+        const wc = init.modules.find((m) => m.productId === 'wallet_connect');
+        expect(wc?.params?.allowedChains).toEqual(['stellar:testnet']);
+    });
+
+    it('follows activeNetwork onto mainnet', async () => {
+        vi.resetModules();
+        installMocks('Public Global Stellar Network ; September 2015', {
+            walletConnectProjectId: 'wc-project-id',
+        });
+
+        const { stellarKitAdapter } = await import('../src/lib/wallet/adapter');
+        await stellarKitAdapter.connect();
+
+        const init = kitMock.init.mock.calls[0]?.[0] as {
+            modules: Array<{ productId: string; params?: { allowedChains?: string[] } }>;
+        };
+        const wc = init.modules.find((m) => m.productId === 'wallet_connect');
+        expect(wc?.params?.allowedChains).toEqual(['stellar:pubnet']);
+    });
+
+    it('carries the real app identity into the wallet approval screen', async () => {
+        vi.resetModules();
+        installMocks(TESTNET_PASSPHRASE, { walletConnectProjectId: 'wc-project-id' });
+
+        const { stellarKitAdapter } = await import('../src/lib/wallet/adapter');
+        await stellarKitAdapter.connect();
+
+        // Shown to the student while they approve; a placeholder origin here
+        // reads as phishing at the moment trust matters most.
+        const init = kitMock.init.mock.calls[0]?.[0] as {
+            modules: Array<{ productId: string; params?: { metadata?: { url?: string } } }>;
+        };
+        const wc = init.modules.find((m) => m.productId === 'wallet_connect');
+        expect(wc?.params?.metadata?.url).toBe('https://acredia.test');
+    });
+
+    it('degrades to no WalletConnect when the module fails to load', async () => {
+        vi.resetModules();
+        installMocks(TESTNET_PASSPHRASE, { walletConnectProjectId: 'wc-project-id' });
+        vi.doMock(`${KIT_PATH}/modules/wallet-connect`, () => {
+            throw new Error('bundle unavailable');
+        });
+
+        const { stellarKitAdapter } = await import('../src/lib/wallet/adapter');
+
+        // A misconfigured id must never be what makes the Connect button throw.
+        await expect(stellarKitAdapter.connect()).resolves.toBeTruthy();
+        expect(registeredModuleIds()).not.toContain('wallet_connect');
+    });
+});
 
 describe('capability table', () => {
     it('marks the wallets that reject signMessage at runtime', async () => {

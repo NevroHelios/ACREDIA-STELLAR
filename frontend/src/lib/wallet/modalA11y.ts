@@ -19,6 +19,11 @@
  *     technology presents it as ordinary page content rather than as something
  *     that has taken over the screen.
  *
+ *  3. Its icon buttons size purely from padding, landing at 34x34px — under the
+ *     44px minimum WCAG 2.5.5 and both mobile platforms ask for. Measured at
+ *     360px wide, which is the width this has to work at
+ *     (ACREDIA-STELLAR#4). Too small to hit reliably with a thumb.
+ *
  * This is the screen where someone decides whether to trust us with a wallet,
  * so both are repaired here rather than waited on upstream. Each repair is
  * written to become a no-op the moment the kit fixes it.
@@ -122,6 +127,40 @@ export function labelModalIconButtons(root: ParentNode): number {
  * `closest('section')` is used rather than counting parents so that an extra
  * wrapper in a future kit release shifts nothing.
  */
+/**
+ * The minimum comfortable touch target, in CSS pixels.
+ *
+ * WCAG 2.5.5 (Target Size, AAA) asks for 44x44; Apple's HIG and Material both
+ * land on the same figure independently. The kit's icon buttons come out at
+ * 34x34 because it sizes them from padding alone.
+ */
+const MIN_TOUCH_TARGET_PX = 44;
+
+/**
+ * Enlarges the modal's icon buttons to a thumb-sized target.
+ *
+ * Applied to every viewport rather than only to phones: a 44px target is not
+ * worse with a mouse, and a width-conditional rule would silently stop
+ * applying if the kit ever changed when it mounts. Written as inline
+ * `min-width`/`min-height` because the kit's class names are CSS-in-JS hashes
+ * that no stylesheet of ours can target.
+ */
+function enlargeTouchTargets(root: ParentNode): void {
+    for (const label of ICON_LABELS) {
+        const button = root.querySelector<HTMLElement>(`button[aria-label="${label.label}"]`);
+        if (!button || button.dataset.acrediaTouchTarget === 'done') continue;
+
+        button.style.minWidth = `${MIN_TOUCH_TARGET_PX}px`;
+        button.style.minHeight = `${MIN_TOUCH_TARGET_PX}px`;
+        // The kit centres the icon with padding; without this the glyph sits
+        // off-centre once the box grows.
+        button.style.display = 'inline-flex';
+        button.style.alignItems = 'center';
+        button.style.justifyContent = 'center';
+        button.dataset.acrediaTouchTarget = 'done';
+    }
+}
+
 function markUpDialog(root: ParentNode): void {
     const closeButton = root.querySelector('button[aria-label="Close wallet selection"]');
     const header = closeButton?.closest('header');
@@ -177,8 +216,11 @@ export function ensureModalA11y(): void {
     // a button that already has a name is skipped, and one without a matching
     // icon path is left alone.
     const sweep = () => {
+        // Order matters: the labels are what the other two repairs locate the
+        // buttons and the dialog card by.
         labelModalIconButtons(document.body);
         markUpDialog(document.body);
+        enlargeTouchTargets(document.body);
     };
 
     observer = new MutationObserver(sweep);

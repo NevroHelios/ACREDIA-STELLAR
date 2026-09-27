@@ -15,6 +15,7 @@ import { captureException } from '@/lib/debug';
 import { normalizeSignedMessage } from '@/lib/walletOwnership';
 import { activeNetwork } from '@/lib/stellar';
 import { walletAdapter, WalletCapabilityError, WalletUserRejectedError } from '@/lib/wallet';
+import { MobileWalletNotice } from '@/components/wallet/MobileWalletNotice';
 
 type Step = 'connect' | 'details' | 'done';
 
@@ -32,7 +33,20 @@ type Step = 'connect' | 'details' | 'done';
  */
 export default function ClaimPage() {
     const router = useRouter();
-    const { address, connect, isConnecting, walletName, capabilities } = useStellarAccount();
+    const {
+        address,
+        connect,
+        isConnecting,
+        walletName,
+        capabilities,
+        hasNoUsableWallet,
+        hasNoMessageSigningWallet,
+    } = useStellarAccount();
+
+    // Claiming needs a message signature, so this page is blocked by a narrower
+    // condition than the rest of the app: a phone can reach Albedo and connect
+    // fine, yet still be unable to prove wallet ownership (ACREDIA-STELLAR#4).
+    const claimBlockedOnThisDevice = hasNoUsableWallet || hasNoMessageSigningWallet;
 
     // Not every Stellar wallet can sign a message — Albedo and Rabet both
     // reject it outright — and this whole page is a message signature. A
@@ -206,7 +220,7 @@ export default function ClaimPage() {
                             </div>
                         </div>
 
-                        {!address && (
+                        {!address && !claimBlockedOnThisDevice && (
                             <Button
                                 type="button"
                                 variant="outline"
@@ -219,6 +233,16 @@ export default function ClaimPage() {
                             </Button>
                         )}
                     </div>
+
+                    {/*
+                      * The claim flow is the one a student is most likely to
+                      * reach on a phone — it is how they get in when their
+                      * institution never provisioned an account. A dead end
+                      * here is the worst place for one, so the options are
+                      * spelled out rather than hidden behind a button that
+                      * cannot work (ACREDIA-STELLAR#4).
+                      */}
+                    {!address && claimBlockedOnThisDevice && <MobileWalletNotice />}
 
                     {address && !canSignMessage && (
                         <div

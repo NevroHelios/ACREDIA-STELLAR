@@ -27,6 +27,22 @@ type RuntimeConfig = {
     debug: {
         enableLogs: boolean;
     };
+    /**
+     * WalletConnect, which is what makes a phone able to connect at all
+     * (ACREDIA-STELLAR#4).
+     *
+     * Every other supported wallet needs a browser extension, so on a mobile
+     * browser the wallet list is effectively empty without this. It is
+     * optional because the project id is deployment configuration, not code:
+     * with no id the module is simply not registered, and the UI says so
+     * rather than offering a wallet that cannot work.
+     */
+    walletConnect: {
+        projectId: string | null;
+        /** App name/url shown in the wallet while approving the session. */
+        appName: string;
+        appUrl: string;
+    };
 };
 
 type ServerRuntimeConfig = {
@@ -152,6 +168,10 @@ function readRawEnv(name: string): string | undefined {
             return process.env.NEXT_PUBLIC_PINATA_GATEWAY;
         case 'NEXT_PUBLIC_ENABLE_DEBUG_LOGS':
             return process.env.NEXT_PUBLIC_ENABLE_DEBUG_LOGS;
+        case 'NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID':
+            return process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
+        case 'NEXT_PUBLIC_SITE_URL':
+            return process.env.NEXT_PUBLIC_SITE_URL;
         // Listed so the "secret exposed to the browser" guard can observe these
         // client-side, not just on the server.
         case 'NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY':
@@ -427,6 +447,14 @@ function buildRuntimeConfig(): RuntimeConfig {
         debug: {
             enableLogs: debugFlag.success ? debugFlag.data : false,
         },
+        walletConnect: {
+            projectId: readEnv('NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID') ?? null,
+            appName: 'Acredia',
+            // The wallet displays this while asking the student to approve a
+            // session, so it has to be the real origin — a placeholder here
+            // reads as a phishing attempt at the moment trust matters most.
+            appUrl: readEnv('NEXT_PUBLIC_SITE_URL') ?? 'https://acredia.example',
+        },
     };
 }
 
@@ -514,6 +542,14 @@ function buildFallbackRuntimeConfig(): RuntimeConfig {
         },
         debug: {
             enableLogs: false,
+        },
+        // Deliberately off in the degraded config: a WalletConnect session
+        // carries the app's identity and network into the student's wallet, and
+        // this branch runs precisely when we are unsure what those are.
+        walletConnect: {
+            projectId: null,
+            appName: 'Acredia',
+            appUrl: readEnv('NEXT_PUBLIC_SITE_URL') ?? 'https://acredia.example',
         },
     };
 }

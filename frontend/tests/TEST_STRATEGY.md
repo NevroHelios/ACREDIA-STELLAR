@@ -119,6 +119,7 @@ per-wallet matrix below cannot be automated and has to be walked by a human.
 | [contractsInvoke.test.ts](./contractsInvoke.test.ts) | The full build → simulate → sign → submit → confirm sequence in `invokeContractMethod`, driven by a **keypair signer with no browser**. Verifies the submitted transaction really is signed by that keypair, not just that submit was called. Previously impossible (ACREDIA-STELLAR#3). |
 | [stellarSigner.test.ts](./stellarSigner.test.ts) | The signer implementations: signatures verify against the public key, follow the passphrase they are told, and round-trip through the real server-side verifier. |
 | [e2eLedger.test.ts](./e2eLedger.test.ts) | The single E2E seam that replaced six inline `getE2eState()` forks, plus assertions that `contracts.ts` imports no wallet SDK and never calls `getE2eState`. |
+| [walletPlatform.test.ts](./walletPlatform.test.ts) | Mobile device detection (including iPadOS's desktop UA) and which wallets a phone can actually reach — the judgements the mobile fix rests on (ACREDIA-STELLAR#4). |
 | [walletAdapter.test.ts](./walletAdapter.test.ts) | Connect / restore / disconnect, capability gating, response normalisation, network selection, single-init under concurrency. Kit fully mocked. |
 | [walletBoundary.test.ts](./walletBoundary.test.ts) | That no file outside `src/lib/wallet/` imports a wallet library, and that no copy presents Freighter as a requirement. Walks the source tree. |
 | [walletModalA11y.test.ts](./walletModalA11y.test.ts) | That the modal's icon buttons are identified and labelled. Pins the kit's real SVG path data, so a kit upgrade that redraws an icon fails here. |
@@ -193,12 +194,45 @@ becomes ours to fix, the close button is reachable at
 `button[aria-label="Close wallet selection"]` — the label Acredia adds in
 `src/lib/wallet/modalA11y.ts`.
 
+### Mobile (ACREDIA-STELLAR#4)
+
+Measured in emulated mobile Chromium (iPhone 12, Pixel 5, 360px and 320px
+Android), against the real kit modal:
+
+| Check | Result |
+| --- | --- |
+| Wallets *reporting* available on mobile | xBull, Albedo, HOT Wallet |
+| Wallets that **actually** work | Albedo only — the other two report `true` unconditionally |
+| Modal at 360px | 352px wide, no horizontal page scroll, 0 axe violations |
+| Modal at 320px | 320px wide, no overflow, 0 axe violations |
+| Header tap targets | 34px before the fix → **44px** after (WCAG 2.5.5) |
+| `/claim` on mobile | Shows the options notice; no "install extension" copy; offers a desktop route |
+
+Two traps worth knowing if you touch this:
+
+- **`isAvailable` is not trustworthy on mobile.** xBull and HOT both return
+  `true` without checking anything. `src/lib/wallet/platform.ts` holds the real
+  answer, and `walletPlatform.test.ts` pins it.
+- **HOT Wallet is deliberately excluded.** Its module hardcodes
+  `Networks.PUBLIC` and needs `global`/`Buffer` polyfills this app does not ship,
+  so on testnet it would sign against the wrong ledger.
+
+**Not verified here:** a real phone with a real wallet app. Everything above is
+emulated Chromium, which reproduces layout, detection and a11y faithfully but
+cannot prove a WalletConnect session end to end.
+
 ### WalletConnect (mobile)
 
-Not wired up. The kit's `WalletConnectModule` needs a project id from
-[Reown](https://cloud.reown.com), which is deployment configuration rather than
-code, and mobile verification needs a real device. See ACREDIA-STELLAR#4.
-Registering it is a two-line change in `loadKit()` once the id exists.
+**Implemented**, gated on `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` (free, from
+[Reown](https://cloud.reown.com)). With no id set the module is not registered at
+all, so there is no broken entry in the wallet list; set it and the QR option
+appears with no code change. `allowedChains` is derived from `activeNetwork`
+rather than left on the kit's PUBLIC default, which would have asked a testnet
+deployment's wallet to approve a mainnet session.
+
+**Still needs a human:** connect + issue + claim from a real phone with a real
+wallet app, against a deployment that has the project id set. The QR handshake
+and the wallet app's own `stellar_signMessage` support cannot be emulated.
 
 ### Adding a wallet
 

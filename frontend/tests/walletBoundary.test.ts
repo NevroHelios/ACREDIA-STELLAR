@@ -92,6 +92,16 @@ describe('wallet library boundary', () => {
     });
 });
 
+/**
+ * Strips comments so the copy guards below read only what can reach a screen.
+ *
+ * Without this they match their own explanatory docblocks — a comment quoting
+ * the bad copy in order to forbid it would fail the very rule it documents.
+ */
+function stripComments(source: string): string {
+    return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+}
+
 describe('user-facing copy', () => {
     const files = walkTypeScriptFiles(SRC);
 
@@ -107,13 +117,37 @@ describe('user-facing copy', () => {
 
         const offenders = files
             .filter((file) => !file.startsWith(ADAPTER_DIR))
-            .filter((file) => requirementPhrasing.test(readFileSync(file, 'utf8')))
+            .filter((file) => requirementPhrasing.test(stripComments(readFileSync(file, 'utf8'))))
             .map((file) => relative(process.cwd(), file));
 
         expect(
             offenders,
             'Copy in these files presents Freighter as a requirement. Name the wallet the user actually chose ' +
                 '(`walletName` from useStellarAccount), or speak of "your wallet".',
+        ).toEqual([]);
+    });
+
+    /**
+     * A phone cannot install a browser extension, so telling a mobile user to
+     * do it is the dead end ACREDIA-STELLAR#4 is about — it was the literal
+     * previous behaviour ("Please install the browser extension!").
+     *
+     * Naming an extension is fine where the copy is device-aware; instructing
+     * someone to install one is not, because that string can reach a phone.
+     */
+    it('never instructs anyone to install a browser extension', () => {
+        const installExtension =
+            /(install|download|get)[^.\n]{0,30}\b(browser )?extension\b/i;
+
+        const offenders = files
+            .filter((file) => !file.startsWith(ADAPTER_DIR))
+            .filter((file) => installExtension.test(stripComments(readFileSync(file, 'utf8'))))
+            .map((file) => relative(process.cwd(), file));
+
+        expect(
+            offenders,
+            'Copy in these files tells the user to install a browser extension. On a phone that is ' +
+                'impossible — offer the mobile route instead (see MobileWalletNotice).',
         ).toEqual([]);
     });
 });

@@ -14,6 +14,14 @@ import type { ConnectedWallet, WalletAdapter } from './types';
 export * from './types';
 export { capabilitiesFor, supportsMessageSigning, WALLET_IDS } from './capabilities';
 export { walletNameFor } from './adapter';
+export {
+    advisePlatform,
+    isDesktopExtensionOnly,
+    isMobileBrowser,
+    isMobileCapable,
+    type MobileBlockReason,
+    type PlatformAdvice,
+} from './platform';
 
 /**
  * The wallet the browser suite pretends to be.

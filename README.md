@@ -72,10 +72,14 @@ Traditional paper-based or centralized digital credentials suffer from:
 Acredia solves these problems by creating **immutable, blockchain-verified credentials** that are:
 
 - ✅ Permanent and tamper-proof
-- ✅ lntly verifiable
+- ✅ Instantly verifiable
 - ✅ Decentralized and censorship-resistant
-- ✅ Accessible anywhere, anytime
+- ✅ Verifiable from any device, anywhere — no account, no app
 - ✅ Privacy-preserving with student control
+
+> **Verifying** a credential works on any device with a browser. **Connecting a
+> wallet** to issue or claim one has device requirements today — see
+> [Connecting on a phone](#connecting-on-a-phone).
 
 ---
 
@@ -102,6 +106,11 @@ Acredia is built on **Stellar Network**, a decentralized network focused on prov
 - Designed for global financial inclusion
 - Works on low-bandwidth connections
 - Accessible from anywhere in the world
+
+> These describe the **Stellar network**. What Acredia's own interface supports
+> on a given device is a separate question — see
+> [Connecting on a phone](#connecting-on-a-phone), which is honest about the
+> current mobile limits (ACREDIA-STELLAR#4).
 
 **🔒 Decentralized Infrastructure**
 
@@ -356,6 +365,41 @@ Rabet do not implement message signing, so Acredia detects that on connect and
 says so up front instead of letting you fill in the form and fail at the last
 step. Everything else — connecting, issuing, revoking, verifying — works with
 all ten.
+
+### Connecting on a phone
+
+**Verifying** a credential works on any device — it is a public page, no wallet
+and no account needed. **Connecting a wallet** is where the device matters, and
+we would rather state the limit than let a student discover it at the last step
+(ACREDIA-STELLAR#4).
+
+Eight of the ten wallets above are desktop browser extensions, so they cannot be
+reached from a mobile browser at all. Measured in emulated mobile Chromium
+(iPhone 12, Pixel 5, 360px Android), the wallets that *report* themselves
+available on a phone are xBull, Albedo and HOT Wallet — and of those only Albedo
+actually works, because the other two report `true` unconditionally.
+
+| On a phone, can you… | Today |
+| --- | --- |
+| Verify a credential | ✅ Yes — any browser, no wallet |
+| View credentials in your dashboard | ✅ Yes — email + password sign-in |
+| Connect a wallet | ⚠️ Only with WalletConnect configured, or Albedo |
+| Claim a credential (`/claim`) | ⚠️ Needs WalletConnect — Albedo cannot sign messages |
+| Issue or revoke | 💻 Desktop recommended |
+
+**WalletConnect is the fix**, and it is implemented — the student scans a QR with
+a wallet app (Lobstr, Hana) and signs there. It needs one deployment setting:
+
+```bash
+# from https://cloud.reown.com — free
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
+NEXT_PUBLIC_SITE_URL=https://your-domain.example   # shown in the wallet on approval
+```
+
+Without that id the module is not registered at all — no broken entry in the
+list — and mobile users get an honest explanation of their options instead of an
+instruction to install a desktop extension on a phone. Set it and the QR option
+appears with no code change.
 
 Adding a wallet is a change in one file:
 [`frontend/src/lib/wallet/adapter.ts`](frontend/src/lib/wallet/adapter.ts).

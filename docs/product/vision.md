@@ -76,6 +76,32 @@ Why start here: shorter sales cycles than large universities, credentials that a
 - **Employer / verifier** — *Verify instantly, free.* Confirm authenticity (and, on the roadmap, integrity and revocation status) in seconds from a QR code or link — no login, no back-and-forth.
 - **Platform admin** — *Govern trust.* Authorize only vetted issuers on-chain, with an auditable approval trail.
 
+### Device reality check (ACREDIA-STELLAR#4)
+
+The student persona above is a recent graduate and job seeker — in much of the
+world, that is a phone-first user. Stating "own it for life" and "portable across
+borders" only holds if the device they own can reach the product, so the current
+limits are recorded here rather than left implicit:
+
+| Journey | Phone | Desktop |
+| --- | --- | --- |
+| Verify a credential (employer or student) | ✅ | ✅ |
+| Sign in and view your dashboard | ✅ | ✅ |
+| Share a link or QR code | ✅ | ✅ |
+| Connect a wallet | ⚠️ needs WalletConnect configured | ✅ |
+| Claim a credential issued to your address | ⚠️ needs WalletConnect configured | ✅ |
+| Issue / revoke (institution) | ⚠️ | ✅ |
+
+The constraint is that eight of the ten supported wallets are desktop browser
+extensions. WalletConnect removes it and is implemented; it needs one deployment
+setting (`NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`). Until that is set, mobile users
+are told what actually works on their device — never to install a browser
+extension on a phone. See
+[Connecting on a phone](../../README.md#connecting-on-a-phone).
+
+**This table is a commitment to accuracy, not a target.** If a claim here stops
+matching the product, the claim is the bug.
+
 ---
 
 ## 5. Differentiators (top 3 vs. incumbents)
