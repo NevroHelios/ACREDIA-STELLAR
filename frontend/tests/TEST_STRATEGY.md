@@ -51,3 +51,55 @@ Located in [e2e.lifecycle.test.ts](./e2e.lifecycle.test.ts):
 ### 7. Role-Based Access Validation
 
 - **Strategy**: Validate route access patterns using mocked authentication states. Verify that the admin authorization guard helper (`requireAdminRequest`) resolves correctly for allowlisted admin emails and successfully denies student or unauthorized access roles.
+
+---
+
+## 🛡️ Base-URL Identity Guard
+
+**If a browser run fails before any test starts, with "Refusing to run the Playwright
+suite against …", this is the section you want.**
+
+### What it does
+
+[global-setup.ts](./playwright/global-setup.ts) runs once, before any spec, and fetches
+the configured base URL. It continues only if the response carries the Acredia marker —
+a `<meta name="x-acredia-app" content="acredia-stellar">` tag emitted from the root
+layout, so it is present on every route. Anything else aborts the run with an explicit
+message naming the URL and how to fix it.
+
+### Why it exists
+
+`webServer.reuseExistingServer` attaches to whatever is already listening on the
+configured port. Port 3000 is shared with roughly every other web project on a
+developer's machine, and on 2026-09-26 the a11y suite attached to an unrelated CRM dev
+server and reported four failures citing elements (`/objects/people`,
+`navigation-drawer-item`) that exist nowhere in this repository (ACREDIA-STELLAR#271).
+
+The false failures were the visible harm; the false *passes* were the real one. Another
+app that happens to be accessible on the audited paths would report green while
+Acredia's own regressions shipped unexercised — and nothing in the output would say the
+audit had been pointed somewhere else.
+
+### The three layers
+
+| Layer | Mechanism | Covers |
+| --- | --- | --- |
+| Unlikely collision | Default port is **3199**, not 3000 | The everyday case |
+| Detected collision | Global setup asserts the marker | A collision that happens anyway |
+| No collision at all | `reuseExistingServer: !process.env.CI` | CI, which always starts its own server |
+
+### Overriding the port
+
+`PLAYWRIGHT_PORT` still works when 3199 is itself taken:
+
+```bash
+PLAYWRIGHT_PORT=3200 npx playwright test
+```
+
+### Changing the marker
+
+The name and value live in [src/lib/appIdentity.ts](../src/lib/appIdentity.ts) and are
+compared as strings. Changing one side alone breaks every browser run — the layout and
+the guard must move together. [playwrightIdentityGuard.test.ts](./playwrightIdentityGuard.test.ts)
+covers both, including a deliberate run against a non-Acredia responder that asserts the
+setup fails rather than proceeding.
