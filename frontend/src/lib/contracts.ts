@@ -1,4 +1,3 @@
-import { signTransaction } from '@stellar/freighter-api';
 import {
     Account,
     Address,
@@ -15,6 +14,7 @@ import { debugLog, debugWarn, captureException } from './debug';
 import { generateCanonicalCredentialHash } from './credentialHash';
 import { credentialHashHexToScVal } from './credentialHashEncoding';
 import { getE2eState, updateE2eState } from './e2e';
+import { walletAdapter, WalletUserRejectedError } from './wallet';
 
 export interface CredentialMetadata {
     studentAddress: string;
@@ -95,18 +95,23 @@ async function invokeContractMethod(
     debugLog(`Preparing contract method "${method}".`);
     const preparedTx = await sorobanServer.prepareTransaction(transaction as never);
 
-    debugLog('Signing transaction with Freighter.');
-    let signedXdrResponse: unknown;
+    debugLog('Requesting signature from the connected wallet.');
+    let finalXdr: string;
     try {
-        signedXdrResponse = await signTransaction(preparedTx.toXDR(), {
+        // The adapter normalises every wallet's response down to a signed XDR
+        // string, so the shape-guessing this function used to do
+        // (`signedTxXdr` vs. a bare string vs. `Object.values(...)[0]`) now
+        // lives in one place instead of at every call site.
+        finalXdr = await walletAdapter.signTransaction(preparedTx.toXDR(), {
             networkPassphrase: activeNetwork.networkPassphrase,
-            network: activeNetwork.networkName,
-        } as never);
+            address: signerAddress,
+        });
     } catch (signError: unknown) {
-        const msg = String((signError instanceof Error ? (signError instanceof Error ? signError.message : String(signError)) : String(signError)) || signError);
-        if (msg.includes('User canceled') || msg.includes('canceled') || msg.includes('rejected')) {
+        if (signError instanceof WalletUserRejectedError) {
             throw new Error('Transaction signing was canceled by the user.', { cause: signError });
         }
+
+        const msg = signError instanceof Error ? signError.message : String(signError);
         if (
             msg.includes('Network') ||
             msg.includes('network') ||
@@ -114,24 +119,13 @@ async function invokeContractMethod(
             msg.includes('mainnet')
         ) {
             throw new Error(
-                `Network mismatch: Your Freighter wallet may be on a different network.\n` +
+                `Network mismatch: your wallet may be on a different network.\n` +
                     `Expected: ${activeNetwork.networkName}\n` +
                     `${msg}`,
-                { cause: signError }
+                { cause: signError },
             );
         }
-        throw new Error(`Freighter signing error: ${msg}`, { cause: signError });
-    }
-
-    const finalXdr =
-        typeof signedXdrResponse === 'string'
-            ? signedXdrResponse
-            : (signedXdrResponse as Record<string, unknown>)?.signedTxXdr || Object.values(signedXdrResponse || {})[0];
-
-    if (!finalXdr || typeof finalXdr !== 'string') {
-        throw new Error(
-            'Freighter signing failed or wallet account may have disconnected. Please reconnect and try again.',
-        );
+        throw new Error(`Wallet signing error: ${msg}`, { cause: signError });
     }
 
     const signedTx = TransactionBuilder.fromXDR(finalXdr, activeNetwork.networkPassphrase);

@@ -35,8 +35,8 @@ export function buildClaimMessage(walletAddress: string, nonce: string): string 
  * Verifies a signature over {@link buildClaimMessage} against a Stellar
  * address.
  *
- * Accepts the signature as base64 (Freighter v4 returns a base64 string; v3
- * returns a Buffer the caller serialises the same way). Any malformed input —
+ * Accepts the signature as base64; {@link normalizeSignedMessage} is what
+ * every wallet's response is funnelled through to get there. Any malformed input —
  * a bad address, undecodable base64, a wrong-length signature — is a failed
  * verification, never a thrown error, so a caller cannot distinguish "invalid
  * signature" from "malformed request" by watching for exceptions.
@@ -76,17 +76,32 @@ export function verifyWalletSignature(
     }
 }
 
+/** An Ed25519 signature is 64 bytes — 128 characters of hex. */
+const HEX_SIGNATURE_PATTERN = /^[0-9a-f]{128}$/i;
+
 /**
- * Normalises what Freighter returns into base64.
+ * Normalises whatever a wallet returns from `signMessage` into base64.
  *
- * `signMessage` returns a Buffer on v3 of the API and a base64 string on v4;
- * a claim must work on both rather than failing for whichever the student
- * happens to have installed.
+ * Wallets disagree about the encoding, and the disagreement is silent: every
+ * shape below is a plausible-looking string, so getting it wrong produces a
+ * failed *verification* rather than a parse error, which reads to the student
+ * as "your wallet is wrong" (ACREDIA-STELLAR#272).
+ *
+ *  - base64 string — Freighter v4, xBull, Lobstr, Hana and most others
+ *  - `Uint8Array`/Buffer — Freighter v3
+ *  - lowercase hex — Bitget, whose module returns `signatureHex`
+ *
+ * Hex is detected by shape rather than by asking which wallet signed: the
+ * caller should not have to care, and a 128-character hex string is not a
+ * valid base64 encoding of a 64-byte signature, so the two cannot collide.
  */
 export function normalizeSignedMessage(signed: string | Uint8Array | null): string | null {
     if (!signed) return null;
 
     if (typeof signed === 'string') {
+        if (HEX_SIGNATURE_PATTERN.test(signed)) {
+            return Buffer.from(signed, 'hex').toString('base64');
+        }
         return signed;
     }
 

@@ -191,7 +191,7 @@ function baseReport(row: CsvCredentialRow): BatchIssuanceRowReport {
  *     one batchIssueCredentialOnStellar call — one wallet signature covers
  *     a whole chunk.
  *  4. Chunks run sequentially, never in parallel: each needs its own
- *     Freighter signature prompt, and concurrent signTransaction calls would
+ *     wallet signature prompt, and concurrent signTransaction calls would
  *     produce competing popups.
  *  5. If a whole chunk call throws (simulation error, cancelled signature,
  *     network failure), stop — don't cascade into more signature prompts —

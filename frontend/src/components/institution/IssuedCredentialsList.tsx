@@ -165,7 +165,7 @@ const res = await fetch(`/api/institution/credentials?${params}`, {
             if ((err instanceof Error ? err.message : String(err))?.includes('canceled') || (err instanceof Error ? err.message : String(err))?.includes('rejected')) {
                 errorMessage = 'Revocation was canceled or rejected by you';
             } else if ((err instanceof Error ? err.message : String(err))?.includes('Network')) {
-                errorMessage = 'Network mismatch. Please check your Freighter wallet settings.';
+                errorMessage = 'Network mismatch. Please check your wallet’s network settings.';
             } else if ((err instanceof Error ? err.message : String(err))?.includes('same wallet')) {
                 errorMessage = 'You must connect the same wallet that issued this credential';
             } else if ((err instanceof Error ? err.message : String(err))?.includes('Not authorized')) {

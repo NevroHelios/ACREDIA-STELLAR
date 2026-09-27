@@ -144,7 +144,7 @@ export function AuthorizeIssuer() {
             if (msg.includes('canceled') || msg.includes('User')) {
                 msg = 'Authorization transaction was canceled.';
             } else if (msg.includes('Network')) {
-                msg = 'Network mismatch detected. Please check your Freighter settings.';
+                msg = 'Network mismatch detected. Please check your wallet’s network settings.';
             }
             toast.error(msg, { id: 'authorize' });
         } finally {

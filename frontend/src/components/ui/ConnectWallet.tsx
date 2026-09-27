@@ -6,7 +6,7 @@ import { useStellarAccount } from '@/contexts/StellarContext';
 import { Button } from './button';
 
 export function ConnectWallet() {
-    const { address, isConnecting, connect, disconnect } = useStellarAccount();
+    const { address, isConnecting, connect, disconnect, walletName } = useStellarAccount();
 
     if (address) {
         return (
@@ -19,7 +19,7 @@ export function ConnectWallet() {
                         toast.success('Wallet address copied!');
                     }}
                     title="Copy address"
-                    aria-label={`Wallet connected: ${address.slice(0, 5)}...${address.slice(-4)}. Click to copy full address.`}
+                    aria-label={`${walletName ?? 'Wallet'} connected: ${address.slice(0, 5)}...${address.slice(-4)}. Click to copy full address.`}
                 >
                     <span className="flex h-2 w-2 shrink-0 rounded-full bg-success" />
                     <Wallet className="h-4 w-4 text-primary" />
@@ -46,7 +46,7 @@ export function ConnectWallet() {
             onClick={connect}
             disabled={isConnecting}
             aria-label={
-                isConnecting ? 'Connecting wallet…' : 'Connect Stellar wallet with Freighter'
+                isConnecting ? 'Connecting wallet…' : 'Connect a Stellar wallet'
             }
         >
             <Wallet className="h-4 w-4" />

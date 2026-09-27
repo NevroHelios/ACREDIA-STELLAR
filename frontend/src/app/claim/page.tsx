@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, Wallet } from 'lucide-react';
-import { signMessage } from '@stellar/freighter-api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +14,7 @@ import { useStellarAccount } from '@/contexts/StellarContext';
 import { captureException } from '@/lib/debug';
 import { normalizeSignedMessage } from '@/lib/walletOwnership';
 import { activeNetwork } from '@/lib/stellar';
+import { walletAdapter, WalletCapabilityError, WalletUserRejectedError } from '@/lib/wallet';
 
 type Step = 'connect' | 'details' | 'done';
 
@@ -32,7 +32,14 @@ type Step = 'connect' | 'details' | 'done';
  */
 export default function ClaimPage() {
     const router = useRouter();
-    const { address, connect, isConnecting } = useStellarAccount();
+    const { address, connect, isConnecting, walletName, capabilities } = useStellarAccount();
+
+    // Not every Stellar wallet can sign a message — Albedo and Rabet both
+    // reject it outright — and this whole page is a message signature. A
+    // student who connects one of those would fill in the form and only then
+    // hit a dead end, so the form is withheld and the swap is asked for up
+    // front (ACREDIA-STELLAR#272).
+    const canSignMessage = capabilities?.signMessage ?? true;
 
     const [step, setStep] = useState<Step>('connect');
     const [email, setEmail] = useState('');
@@ -50,7 +57,7 @@ export default function ClaimPage() {
             setStep('details');
         } catch (err) {
             captureException(err, { context: 'claimConnectWallet' });
-            setError('Could not connect your wallet. Make sure Freighter is installed and unlocked.');
+            setError('Could not connect your wallet. Make sure it is installed and unlocked.');
         }
     };
 
@@ -93,19 +100,28 @@ export default function ClaimPage() {
             }
 
             // 2. Sign it with the wallet.
-            const signed = await signMessage(noncePayload.message, {
-                address,
-                networkPassphrase: activeNetwork.networkPassphrase,
-            });
-
-            if (signed.error) {
-                setError('Wallet signature was declined or failed.');
-                return;
+            let signedMessage: string;
+            try {
+                signedMessage = await walletAdapter.signMessage(noncePayload.message, {
+                    address,
+                    networkPassphrase: activeNetwork.networkPassphrase,
+                });
+            } catch (signError) {
+                if (signError instanceof WalletCapabilityError) {
+                    setError(
+                        `${signError.walletName} cannot sign messages, which is how this page proves you own the wallet. ` +
+                            'Reconnect with a wallet that supports message signing — Freighter, xBull, Lobstr or Hana all do.',
+                    );
+                    return;
+                }
+                if (signError instanceof WalletUserRejectedError) {
+                    setError('Wallet signature was declined.');
+                    return;
+                }
+                throw signError;
             }
 
-            const signature = normalizeSignedMessage(
-                signed.signedMessage as string | Uint8Array | null,
-            );
+            const signature = normalizeSignedMessage(signedMessage);
 
             if (!signature) {
                 setError('Your wallet did not return a signature.');
@@ -178,7 +194,11 @@ export default function ClaimPage() {
                             <Wallet className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                             <div className="min-w-0">
                                 <p className="text-sm font-semibold text-foreground">
-                                    {address ? 'Wallet connected' : 'Connect your wallet'}
+                                    {address
+                                        ? walletName
+                                            ? `Connected with ${walletName}`
+                                            : 'Wallet connected'
+                                        : 'Connect your wallet'}
                                 </p>
                                 <p className="mt-0.5 break-all font-mono text-xs text-muted-foreground">
                                     {address ?? 'The wallet your credential was issued to.'}
@@ -200,7 +220,24 @@ export default function ClaimPage() {
                         )}
                     </div>
 
-                    {address && (
+                    {address && !canSignMessage && (
+                        <div
+                            className="rounded-lg border border-warning/25 bg-warning/8 px-4 py-3 text-sm text-warning"
+                            role="alert"
+                        >
+                            <p className="font-semibold">
+                                {walletName ?? 'This wallet'} cannot sign messages
+                            </p>
+                            <p className="mt-1">
+                                Claiming works by signing a short message to prove you own this
+                                wallet, and {walletName ?? 'this wallet'} does not support that.
+                                Disconnect and reconnect with Freighter, xBull, Lobstr or Hana —
+                                all of which do.
+                            </p>
+                        </div>
+                    )}
+
+                    {address && canSignMessage && (
                         <form onSubmit={handleSubmit} className="space-y-5">
                             <div className="space-y-2">
                                 <Label htmlFor="claim-email">Email</Label>
