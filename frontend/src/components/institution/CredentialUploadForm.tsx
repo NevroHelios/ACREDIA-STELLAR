@@ -22,6 +22,7 @@ import { validateCredentialDraft } from '@/lib/credentialValidation';
 import { toast } from 'sonner';
 import { captureException } from '@/lib/debug';
 import { CredentialUploadFormSections } from '@/components/institution/credential-upload/CredentialUploadFormSections';
+import { useStellarAccount } from '@/contexts/StellarContext';
 
 interface Subject {
     id: string;
@@ -35,7 +36,6 @@ interface CredentialUploadFormProps {
     institutionId: string;
     institutionName: string;
     institutionWallet: string;
-    account: string | null;
     onSuccess?: () => void;
 }
 
@@ -43,9 +43,9 @@ export function CredentialUploadForm({
     institutionId,
     institutionName,
     institutionWallet,
-    account,
     onSuccess,
 }: CredentialUploadFormProps) {
+    const { signer } = useStellarAccount();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -202,7 +202,10 @@ export function CredentialUploadForm({
             return;
         }
 
-        if (!account || !selectedFile) {
+        // Guards on the signer: it is null in exactly the cases where there is
+        // nothing to sign with, which is what issuance actually needs
+        // (ACREDIA-STELLAR#3).
+        if (!signer || !selectedFile) {
             toast.error('Please connect your wallet first');
             return;
         }
@@ -231,7 +234,7 @@ export function CredentialUploadForm({
 
             toast.loading('Issuing credential...', { id: 'issue-credential' });
 
-            const result = await issueCredential(credentialData, account, setProgressStep);
+            const result = await issueCredential(credentialData, signer, setProgressStep);
 
             toast.success('Credential issued successfully!', { id: 'issue-credential' });
             toast.success(`Token ID: ${result.tokenId}`, { duration: 5000 });

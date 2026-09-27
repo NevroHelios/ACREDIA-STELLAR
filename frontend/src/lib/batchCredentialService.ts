@@ -12,12 +12,18 @@ import { validateVerifiableCredential } from './schemas';
 import { runtimeConfig } from './runtimeConfig';
 import { captureException } from './debug';
 import { chunkRows, MAX_BATCH_CHUNK_SIZE, validateCsvRows, type CsvCredentialRow } from './batchCredentialImport';
+import type { StellarSigner } from './stellarSigner';
 
 export interface BatchIssuanceContext {
     institutionId: string;
     institutionName: string;
     institutionWallet: string;
-    issuerAddress: string;
+    /**
+     * Who signs each chunk (ACREDIA-STELLAR#3). A signer rather than an
+     * address, so this service never needs to know whether the key lives in a
+     * browser wallet, a keeper process, or a test.
+     */
+    issuer: StellarSigner;
 }
 
 export interface BatchIssuanceRowReport {
@@ -262,7 +268,7 @@ export async function issueBatchCredentials(
                     credentialHash: item.credentialHash,
                     ipfsUri: `ipfs://${item.metadataPath}`,
                 })),
-                context.issuerAddress,
+                context.issuer,
             );
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);

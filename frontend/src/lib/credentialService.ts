@@ -11,6 +11,7 @@ import { validateVerifiableCredential } from './schemas';
 import { runtimeConfig } from './runtimeConfig';
 import { debugLog, captureException, recordMetric } from './debug';
 import { getE2eState, updateE2eState } from './e2e';
+import type { StellarSigner } from './stellarSigner';
 
 export interface Subject {
     id: string;
@@ -48,7 +49,7 @@ export type CredentialIssueProgressStep = 'upload-ipfs' | 'sign-transaction' | '
 
 export async function issueCredential(
     data: CredentialData,
-    issuerAddress: string,
+    issuer: StellarSigner,
     onProgress?: (step: CredentialIssueProgressStep) => void,
 ): Promise<{
     tokenId: string;
@@ -144,7 +145,7 @@ export async function issueCredential(
             data.studentWallet,
             credentialHash,
             metadataUrl,
-            issuerAddress,
+            issuer,
         );
         // eslint-disable-next-line no-console
         console.log('✅ Credential issued! Token ID:', tokenId);
@@ -259,7 +260,7 @@ export async function getCredentialById(credentialId: string) {
 
 export async function revokeCredentialById(
     credentialId: string,
-    issuerAddress: string,
+    issuer: StellarSigner,
 ): Promise<void> {
     const e2eState = getE2eState();
     if (e2eState?.enabled) {
@@ -292,7 +293,7 @@ export async function revokeCredentialById(
             throw new Error('Credential is already revoked');
         }
 
-        const connectedWallet = issuerAddress?.toLowerCase();
+        const connectedWallet = issuer.address?.toLowerCase();
         const storedIssuerWallet = credential.issuer_wallet_address?.toLowerCase();
 
         debugLog('Validating wallet authorization for credential revocation.');
@@ -310,7 +311,7 @@ export async function revokeCredentialById(
         }
 
         if (credential.token_id) {
-            await revokeCredentialOnStellar(credential.token_id, issuerAddress);
+            await revokeCredentialOnStellar(credential.token_id, issuer);
             debugLog('Credential revoked on Stellar network.');
         }
 

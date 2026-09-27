@@ -81,7 +81,7 @@ export function IssuedCredentialsList({ refreshTrigger }: IssuedCredentialsListP
     const [revokeDialogOpen, setRevokeDialogOpen]   = useState(false);
     const [credentialToRevoke, setCredentialToRevoke] = useState<Credential | null>(null);
     const [isRevoking, setIsRevoking]     = useState(false);
-    const { address } = useStellarAccount();
+    const { address, signer } = useStellarAccount();
 
     const updateParams = useCallback((updates: Record<string, string>) => {
         const params = new URLSearchParams(searchParams.toString());
@@ -146,12 +146,13 @@ const res = await fetch(`/api/institution/credentials?${params}`, {
     };
 
     const handleRevokeConfirm = async () => {
-        if (!address) { toast.error('Please connect your wallet first'); return; }
+        // Revocation needs a signature, so the signer is the real requirement.
+        if (!signer) { toast.error('Please connect your wallet first'); return; }
         if (!credentialToRevoke) { toast.error('No credential selected'); return; }
 
         setIsRevoking(true);
         try {
-            await revokeCredentialById(credentialToRevoke.id, address);
+            await revokeCredentialById(credentialToRevoke.id, signer);
             toast.success('Credential revoked successfully');
             setRevokeDialogOpen(false);
             setCredentialToRevoke(null);

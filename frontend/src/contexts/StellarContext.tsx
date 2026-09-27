@@ -1,14 +1,21 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, {
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useState,
+} from 'react';
 import { toast } from 'sonner';
 
 import { captureException } from '@/lib/debug';
-import {
-    walletAdapter,
-    WalletUserRejectedError,
-    type WalletCapabilities,
-} from '@/lib/wallet';
+import { getE2eState } from '@/lib/e2e';
+import { createE2eSigner } from '@/lib/e2eLedger';
+import type { StellarSigner } from '@/lib/stellarSigner';
+import { WalletUserRejectedError, walletAdapter, type WalletCapabilities } from '@/lib/wallet';
+import { createWalletSigner } from '@/lib/wallet/signer';
 
 interface StellarContextType {
     address: string | null;
@@ -17,6 +24,15 @@ interface StellarContextType {
     walletName: string | null;
     /** What that wallet can do — notably whether `/claim` can use it. */
     capabilities: WalletCapabilities | null;
+    /**
+     * The connected wallet as a {@link StellarSigner}, or null when
+     * disconnected (ACREDIA-STELLAR#3).
+     *
+     * Contract calls take this rather than a bare address. Built here so no
+     * component has to assemble one, and so the E2E fake is substituted in
+     * exactly one place instead of being branched on inside `contracts.ts`.
+     */
+    signer: StellarSigner | null;
     isConnecting: boolean;
     connect: () => Promise<void>;
     disconnect: () => void;
@@ -27,6 +43,7 @@ const StellarContext = createContext<StellarContextType>({
     walletId: null,
     walletName: null,
     capabilities: null,
+    signer: null,
     isConnecting: false,
     connect: async () => {},
     disconnect: () => {},
@@ -107,6 +124,23 @@ export const StellarProvider = ({ children }: { children: React.ReactNode }) => 
         toast.info('Wallet disconnected from app level.');
     }, []);
 
+    /**
+     * The signer handed to contract calls.
+     *
+     * The E2E substitution happens here and nowhere else. `contracts.ts` used
+     * to ask `getE2eState()` six separate times to work out whether it was
+     * under test; now it only has to look at the signer it was given.
+     */
+    const signer = useMemo<StellarSigner | null>(() => {
+        if (!address) return null;
+
+        if (getE2eState()?.enabled) {
+            return createE2eSigner(address);
+        }
+
+        return createWalletSigner(address, capabilities);
+    }, [address, capabilities]);
+
     return (
         <StellarContext.Provider
             value={{
@@ -114,6 +148,7 @@ export const StellarProvider = ({ children }: { children: React.ReactNode }) => 
                 walletId,
                 walletName,
                 capabilities,
+                signer,
                 isConnecting,
                 connect,
                 disconnect,

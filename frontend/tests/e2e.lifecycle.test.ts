@@ -79,6 +79,8 @@ vi.mock('../src/lib/supabase', () => ({
 
 // Import target services after mocks are established
 import { issueCredential, type CredentialData } from '../src/lib/credentialService';
+import { Keypair } from '@stellar/stellar-sdk';
+import { createKeypairSigner } from '../src/lib/stellarSigner';
 import { GET } from '../src/app/api/verify/[token]/route';
 import { GET as adminStatsGET } from '../src/app/api/admin/stats/route';
 import {
@@ -126,6 +128,10 @@ function expectVerificationLog(resultType: string, credentialId: string | null) 
 
 // ── CORE LIFECYCLE TESTS ──────────────────────────────────────────────────────
 
+// Issuance takes a StellarSigner rather than an address (ACREDIA-STELLAR#3).
+// A keypair signer needs no browser and no wallet extension.
+const issuerSigner = createKeypairSigner(Keypair.random());
+
 describe('Academic Credential E2E Integration / Lifecycle', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -167,10 +173,7 @@ describe('Academic Credential E2E Integration / Lifecycle', () => {
             error: null,
         });
 
-        const result = await issueCredential(
-            mockCredentialData,
-            'GINSTITUTIONADDRESS12345678901234567890123456789',
-        );
+        const result = await issueCredential(mockCredentialData, issuerSigner);
 
         expect(result).toEqual({
             tokenId: '123',
@@ -194,18 +197,18 @@ describe('Academic Credential E2E Integration / Lifecycle', () => {
 
     // ── 2. FAILED WALLET SIGNING ──────────────────────────────────────────────
     it('covers failed wallet signing during issuance', async () => {
-        // Setup Freighter mock to throw an error (signing rejection or timeout)
+        // The signer rejects, standing in for a cancelled wallet prompt.
         mockIssueCredentialOnStellar.mockRejectedValue(
-            new Error('Freighter signing failed or was canceled.'),
+            new Error('Transaction signing was canceled by the user.'),
         );
         mockSupabaseMaybeSingle.mockResolvedValue({
             data: { id: 'student-db-id-001' },
             error: null,
         });
 
-        await expect(
-            issueCredential(mockCredentialData, 'GINSTITUTIONADDRESS12345678901234567890123456789'),
-        ).rejects.toThrow('Freighter signing failed or was canceled.');
+        await expect(issueCredential(mockCredentialData, issuerSigner)).rejects.toThrow(
+            'Transaction signing was canceled by the user.',
+        );
 
         // Database insert must NEVER be called if signing fails
         expect(mockSupabaseInsert).not.toHaveBeenCalled();

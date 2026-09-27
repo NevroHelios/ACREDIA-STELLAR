@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { CsvCredentialRow } from '../src/lib/batchCredentialImport';
 import type { BatchIssueOutcome } from '../src/lib/contracts';
+import { Keypair } from '@stellar/stellar-sdk';
+import { createKeypairSigner } from '../src/lib/stellarSigner';
 
 vi.mock('../src/lib/ipfs', () => ({
     uploadJSONToIPFS: vi.fn().mockResolvedValue('mock-cid'),
@@ -34,11 +36,15 @@ function makeRow(overrides: Partial<CsvCredentialRow> = {}): CsvCredentialRow {
     };
 }
 
+// A real keypair signer, not a stub: the batch path now takes a StellarSigner,
+// and building one in a plain Node test is the point of ACREDIA-STELLAR#3.
+const issuerKeypair = Keypair.random();
+
 const context = {
     institutionId: 'inst-1',
     institutionName: 'Test University',
     institutionWallet: WALLET,
-    issuerAddress: WALLET,
+    issuer: createKeypairSigner(issuerKeypair),
 };
 
 function stubSupabase(options: { insertError?: unknown } = {}) {
