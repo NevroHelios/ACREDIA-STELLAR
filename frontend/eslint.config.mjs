@@ -32,6 +32,41 @@ export default tseslint.config(
     },
   },
   {
+    // The wallet boundary (ACREDIA-STELLAR#3 / #272).
+    //
+    // Acredia supported exactly one wallet because Freighter was imported
+    // directly in the connection layer, the signing layer and a page
+    // component. Multi-wallet support is only durable if that cannot happen
+    // again, so concrete wallet libraries are importable from
+    // src/lib/wallet/ and nowhere else. Everything else uses the
+    // `WalletAdapter` interface.
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    ignores: ['src/lib/wallet/**'],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@stellar/freighter-api",
+              message:
+                "Acredia is no longer Freighter-only. Use the WalletAdapter from '@/lib/wallet'.",
+            },
+          ],
+          patterns: [
+            {
+              // Covers the barrel and every per-wallet subpath
+              // (…/modules/freighter, …/modules/xbull, and so on).
+              group: ["@creit.tech/stellar-wallets-kit", "@creit.tech/stellar-wallets-kit/**"],
+              message:
+                "Import the WalletAdapter from '@/lib/wallet' instead. Only src/lib/wallet/adapter.ts may talk to a wallet library directly.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['**/debug.ts'],
     rules: {
       "no-console": "off"

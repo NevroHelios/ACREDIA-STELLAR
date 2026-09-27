@@ -1,6 +1,6 @@
 /**
  * Server-side Soroban read helpers.
- * These run in Node.js (API routes) — no Freighter, no browser SDK quirks.
+ * These run in Node.js (API routes) — no wallet, no browser SDK quirks.
  * All functions use simulateTransaction for read-only contract calls.
  */
 import {

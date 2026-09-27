@@ -318,7 +318,7 @@ All deployments, metadata hashes, and transaction executions can be publicly ver
 | **Frontend** | Next.js 16 (App Router), React 19, TypeScript | Web app + server API routes |
 | **UI / styling** | Tailwind CSS v4, Radix UI, Framer Motion, Lucide | Design system, accessible primitives, motion, icons |
 | **Auth** | Supabase Auth | Email/password sessions and JWTs |
-| **Wallet** | Freighter (`@stellar/freighter-api`) | Stellar wallet connection & transaction signing |
+| **Wallet** | Stellar Wallets Kit (`@creit.tech/stellar-wallets-kit`) | Multi-wallet connection & transaction signing — see [Supported wallets](#supported-wallets) |
 | **Smart contract** | Rust + Soroban SDK | `AcrediaCredential` — issuance, authorization, revocation |
 | **Blockchain** | Stellar (testnet) · Soroban RPC · Horizon | Ledger, contract calls, network queries |
 | **Client SDK** | `@stellar/stellar-sdk` | Build / simulate / submit transactions, read contract state |
@@ -326,6 +326,42 @@ All deployments, metadata hashes, and transaction executions can be publicly ver
 | **Database** | Supabase (PostgreSQL) + Row Level Security | Off-chain index: profiles, credentials, verification logs |
 | **Testing** | Vitest, Cargo test, `@vitest/coverage-v8` | Frontend, contract, and coverage |
 | **Tooling** | npm, ESLint, Prettier, Stellar CLI, GitHub Actions | Dev, lint/format, deploy, CI |
+
+---
+
+## 👛 Supported wallets
+
+Acredia connects through [Stellar Wallets Kit](https://github.com/Creit-Tech/Stellar-Wallets-Kit),
+so any of the wallets below can issue, verify, and claim credentials. A
+credential platform promises lifelong access; requiring one specific browser
+extension would have put a ceiling on who that promise applies to
+(ACREDIA-STELLAR#272).
+
+| Wallet | Connect & sign transactions | Sign messages (`/claim`) |
+| --- | :---: | :---: |
+| [Freighter](https://www.freighter.app/) | ✅ | ✅ |
+| [xBull](https://xbull.app/) | ✅ | ✅ |
+| [Lobstr](https://lobstr.co/) | ✅ | ✅ |
+| [Hana](https://hanawallet.io/) | ✅ | ✅ |
+| [Klever](https://klever.io/) | ✅ | ✅ |
+| [OneKey](https://onekey.so/) | ✅ | ✅ |
+| [Bitget Wallet](https://web3.bitget.com/) | ✅ | ✅ |
+| [HOT Wallet](https://hot-labs.org/) | ✅ | ✅ |
+| [Albedo](https://albedo.link/) | ✅ | ❌ not supported by the wallet |
+| [Rabet](https://rabet.io/) | ✅ | ❌ not supported by the wallet |
+
+**About the `/claim` column.** Claiming a credential issued to a wallet you own
+works by signing a short message to prove control of that wallet. Albedo and
+Rabet do not implement message signing, so Acredia detects that on connect and
+says so up front instead of letting you fill in the form and fail at the last
+step. Everything else — connecting, issuing, revoking, verifying — works with
+all ten.
+
+Adding a wallet is a change in one file:
+[`frontend/src/lib/wallet/adapter.ts`](frontend/src/lib/wallet/adapter.ts).
+Nothing else in the codebase may import a wallet library, and that is enforced
+by both ESLint and a test — see
+[Wallet integration](docs/architecture.md#wallet-integration) for why.
 
 ---
 
@@ -341,10 +377,10 @@ Acredia employs a layered testing methodology across the smart contract, the fro
 Comprehensive unit testing utilizing `vitest` covering all utility logic natively on the UI structure:
 - **Ledger Identity Matching**: `isValidAddress` accurately verifies if a 55-character string matches the absolute Stellar Ledger Public pattern (`^G[A-Z2-7]{54}$`).
 - **State Transition Machine**: Business-logic evaluations (`getNextStatus`) verifying strict one-way credential progression: _Draft ➔ Pending_Issuance ➔ Issued ➔ Revoked_. Hard-coded safety blocks malicious regression.
-- **Malicious Payload Defense**: Dynamic testing blocking inputs containing short strings, missing public keys, or invalid empty object injections before the transaction reaches the `Freighter` wallet prompt.
+- **Malicious Payload Defense**: Dynamic testing blocking inputs containing short strings, missing public keys, or invalid empty object injections before the transaction reaches the wallet prompt.
 
 ### 3. Edge-case SDK Resiliency (Implemented)
-- **Freighter API v6 Compatibility**: Safe-parse bypass resolving `e.switch is not a function` by seamlessly handling both string and object responses (`signedTxXdr`) natively returned during wallet transaction signing.
+- **Cross-wallet response normalisation**: Wallets disagree about what a signature *is* — a base64 string, a `Uint8Array`, or (Bitget) lowercase hex. The wallet adapter normalises every response to one shape, so the rest of the app never guesses and a wrong guess cannot show up as a "rejected" claim.
 - **RPC Parsing Fallback**: Strict bypasses for parsing `xdr.ScVal` primitives (like booleans) ensuring boolean RPC responses (e.g., `is_authorized_issuer`) do not crash if executed directly through client-side Javascript prototype boundaries.
 - **Zero-Balance Accounts**: The simulation explicitly constructs dummy `Account` sequences (e.g., Sequence "0") to ensure read-only blockchain queries execute gracefully even if the user connects an unfunded `0 XLM` wallet.
 
@@ -356,7 +392,7 @@ Comprehensive unit testing utilizing `vitest` covering all utility logic nativel
 graph TD
     U["Student · Institution · Verifier"]
     FE["Next.js App (React 19)"]
-    FW["Freighter Wallet"]
+    FW["Stellar Wallet (Freighter, xBull, Lobstr, …)"]
     API["Next.js API Routes"]
     AUTH["Supabase Auth"]
     DB[("Supabase Postgres + RLS")]
@@ -384,7 +420,7 @@ graph TD
 > **Deeper dive:** see [`docs/architecture.md`](docs/architecture.md) for component responsibilities and the full issue / verify / revoke data flows, [`docs/verifiable-credentials.md`](docs/verifiable-credentials.md) for the W3C Verifiable Credential / Open Badges 3.0 metadata schema, field mapping, and a third-party verification recipe, and [`docs/ops/pin-redundancy.md`](docs/ops/pin-redundancy.md) for the IPFS pin-redundancy/keeper durability guarantee.
 
 **Data flow (summary)**
-- **Issue:** institution fills the form → document + metadata (modeled as a W3C VC / Open Badges 3.0 document) pinned to IPFS → SHA-256 hash computed over the canonical payload → issuer signs `issue_credential(student, issuer, hash, ipfs_uri)` via Freighter → the credential is written on-chain and indexed in Postgres.
+- **Issue:** institution fills the form → document + metadata (modeled as a W3C VC / Open Badges 3.0 document) pinned to IPFS → SHA-256 hash computed over the canonical payload → issuer signs `issue_credential(student, issuer, hash, ipfs_uri)` in their wallet → the credential is written on-chain and indexed in Postgres.
 - **Verify:** anyone opens `/verify` (token/QR) → the app reads the credential from the contract via Soroban RPC → shows authenticity + revocation status; a privacy-safe entry is recorded in `verification_logs`.
 - **Revoke:** the original issuer signs `revoke_credential(token_id, issuer)` → the on-chain record is flagged revoked (still readable, so verifiers see "revoked" not "missing") → the index is updated.
 
@@ -769,10 +805,12 @@ Acredia requires custom SMTP to avoid the strict ~3/hour send cap on Supabase's 
 
 ### Wallet Setup for Stellar Network
 
-1. **Install Stellar Wallet** (Options):
-   - [Stellar Laboratory](https://laboratory.stellar.org/) - Web-based
-   - [Freighter Wallet](https://www.freighter.app/) - Browser extension (recommended)
-   - [StellarTerm](https://stellarterm.com/) - Web interface
+1. **Install a Stellar wallet** — any of the ten in
+   [Supported wallets](#supported-wallets) works. Common choices:
+   - [Freighter](https://www.freighter.app/) — browser extension
+   - [xBull](https://xbull.app/) — browser extension and web
+   - [Lobstr](https://lobstr.co/) — mobile-first, with a signer extension
+   - [Albedo](https://albedo.link/) — web-based, no install (cannot claim; see the table)
 
 2. **Create or Import Wallet**:
    - Generate new Stellar keypair or import existing
@@ -1102,7 +1140,7 @@ npm test
 
 **Before testing, ensure:**
 
-1. Freighter Wallet is connected to Stellar Testnet
+1. A [supported wallet](#supported-wallets) is connected to Stellar Testnet
 2. You have sufficient test XLM tokens in your wallet
 3. Environment variables are properly configured
 
@@ -1110,7 +1148,7 @@ npm test
 
 **Network & Wallet**
 
-- [ ] Freighter Wallet connected to Stellar Testnet
+- [ ] A [supported wallet](#supported-wallets) connected to Stellar Testnet
 - [ ] Test XLM tokens available in wallet
 - [ ] Contract addresses correct in `.env.local`
 
@@ -1185,7 +1223,7 @@ npm test
 
 ### Common Issues
 
-**Problem: Freighter Wallet not connecting**
+**Problem: wallet not connecting**
 
 - Solution: Ensure you're on Stellar Testnet and site permissions are granted
 - Refresh the page and try connecting again

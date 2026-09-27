@@ -177,12 +177,51 @@ describe('wallet ownership verification', () => {
         expect(message).toContain(nonce);
     });
 
-    it('normalizes both Freighter response shapes to base64', () => {
+    it('normalizes every wallet response shape to base64', () => {
         const bytes = new Uint8Array([1, 2, 3, 4]);
 
         expect(normalizeSignedMessage('YWJj')).toBe('YWJj');
         expect(normalizeSignedMessage(bytes)).toBe(Buffer.from(bytes).toString('base64'));
         expect(normalizeSignedMessage(null)).toBeNull();
+    });
+
+    /**
+     * Multi-wallet support (Issue #272) brought a third encoding: Bitget's
+     * module returns `signatureHex`. Left as-is it would be read as base64,
+     * decode to the wrong bytes, and fail verification — reported to the
+     * student as a rejected claim rather than as an encoding mismatch.
+     */
+    it('converts a hex signature to base64 so verification still succeeds', () => {
+        const signature = Buffer.from(
+            Array.from({ length: 64 }, (_, index) => index % 256),
+        );
+        const hex = signature.toString('hex');
+
+        expect(normalizeSignedMessage(hex)).toBe(signature.toString('base64'));
+        // Uppercase hex is the same signature.
+        expect(normalizeSignedMessage(hex.toUpperCase())).toBe(signature.toString('base64'));
+    });
+
+    it('leaves a base64 signature untouched', () => {
+        // 64 random-ish bytes in base64 — 88 chars, never 128 hex chars, so
+        // the two encodings cannot be confused for one another.
+        const base64 = Buffer.from(
+            Array.from({ length: 64 }, (_, index) => (index * 7 + 3) % 256),
+        ).toString('base64');
+
+        expect(normalizeSignedMessage(base64)).toBe(base64);
+    });
+
+    it('round-trips a hex signature through verification', () => {
+        const keypair = Keypair.random();
+        const message = buildClaimMessage(keypair.publicKey(), 'nonce-hex-check');
+        const hexSignature = keypair.sign(Buffer.from(message, 'utf8')).toString('hex');
+
+        const normalized = normalizeSignedMessage(hexSignature);
+        expect(normalized).not.toBeNull();
+        expect(verifyWalletSignature(keypair.publicKey(), message, normalized as string)).toBe(
+            true,
+        );
     });
 });
 

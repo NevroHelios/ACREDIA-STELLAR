@@ -1,14 +1,22 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { getAddress, isAllowed, isConnected, requestAccess, setAllowed } from '@stellar/freighter-api';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import { captureException } from '@/lib/debug';
-import { getE2eState, updateE2eState } from '@/lib/e2e';
+import {
+    walletAdapter,
+    WalletUserRejectedError,
+    type WalletCapabilities,
+} from '@/lib/wallet';
 
 interface StellarContextType {
     address: string | null;
+    /** Which wallet the user actually chose, for copy that used to say "Freighter". */
+    walletId: string | null;
+    walletName: string | null;
+    /** What that wallet can do — notably whether `/claim` can use it. */
+    capabilities: WalletCapabilities | null;
     isConnecting: boolean;
     connect: () => Promise<void>;
     disconnect: () => void;
@@ -16,6 +24,9 @@ interface StellarContextType {
 
 const StellarContext = createContext<StellarContextType>({
     address: null,
+    walletId: null,
+    walletName: null,
+    capabilities: null,
     isConnecting: false,
     connect: async () => {},
     disconnect: () => {},
@@ -23,105 +34,91 @@ const StellarContext = createContext<StellarContextType>({
 
 export const StellarProvider = ({ children }: { children: React.ReactNode }) => {
     const [address, setAddress] = useState<string | null>(null);
+    const [walletId, setWalletId] = useState<string | null>(null);
+    const [walletName, setWalletName] = useState<string | null>(null);
+    const [capabilities, setCapabilities] = useState<WalletCapabilities | null>(null);
     const [isConnecting, setIsConnecting] = useState(false);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const e2eState = getE2eState();
-        if (e2eState?.enabled && e2eState.walletAddress) {
-            setAddress(e2eState.walletAddress);
-            return;
-        }
+        let cancelled = false;
 
-        // Silently restore a previously-approved connection on load.
-        // IMPORTANT: never call requestAccess()/setAllowed() here — those open the
-        // Freighter extension popup, which must only happen on an explicit user
-        // action (the Connect button). We only read state the wallet already has.
-        const restoreConnection = async () => {
+        // Silently restore a previously-chosen wallet on load.
+        //
+        // IMPORTANT: `restore()` must never open a wallet popup. A prompt with
+        // no user gesture behind it is hostile, is commonly blocked by the
+        // browser, and for hardware wallets can leave a device waiting on
+        // input nobody asked for. The adapter upholds this by reading the
+        // already-granted permission rather than requesting access; keep any
+        // change to that path under the same rule.
+        const restore = async () => {
             try {
-                const { isConnected: hasFreighter } = await isConnected();
-                if (!hasFreighter) return; // extension not installed
+                const restored = await walletAdapter.restore();
+                if (cancelled || !restored) return;
 
-                const { isAllowed: appAllowed } = await isAllowed();
-                if (!appAllowed) return; // user hasn't authorized this app yet — do not prompt
-
-                const { address } = await getAddress(); // no popup when already allowed
-                if (address) {
-                    setAddress(address);
-                    setError(null);
-                }
+                setAddress(restored.address);
+                setWalletId(restored.walletId);
+                setWalletName(restored.walletName);
+                setCapabilities(restored.capabilities);
             } catch {
-                // Ignore silently: wallet locked, not installed, or not yet authorized.
+                // Wallet locked, uninstalled, or permission revoked. Start
+                // disconnected — the Connect button is right there.
             }
         };
-        restoreConnection();
+
+        restore();
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
-    const connect = async () => {
-        const e2eState = getE2eState();
-        if (e2eState?.enabled) {
-            const nextAddress = e2eState.walletAddress || 'GE2ECONNECTEDWALLET000000000000000000000000000000000';
-            updateE2eState((state) => {
-                state.walletAddress = nextAddress;
-            });
-            setAddress(nextAddress);
-            setIsConnecting(false);
-            return;
-        }
-
+    const connect = useCallback(async () => {
         setIsConnecting(true);
-        setError(null);
         try {
-            const { isConnected: hasFreighter } = await isConnected();
-            if (!hasFreighter) {
-                const msg = 'Freighter wallet not detected. Please install the browser extension!';
-                setError(msg);
-                toast.error(msg);
-                setIsConnecting(false);
+            const connected = await walletAdapter.connect();
+            setAddress(connected.address);
+            setWalletId(connected.walletId);
+            setWalletName(connected.walletName);
+            setCapabilities(connected.capabilities);
+            toast.success(`Connected with ${connected.walletName}`);
+        } catch (error: unknown) {
+            // A user closing the modal is a decision, not a fault. Reporting
+            // it as an error trains people to distrust the error channel.
+            if (error instanceof WalletUserRejectedError) {
+                toast.info(error.message);
                 return;
             }
 
-            await setAllowed();
-            const { address, error: accessError } = await requestAccess();
-            if (accessError) {
-                throw new Error(accessError.message ?? String(accessError));
-            }
-            if (address) {
-                setAddress(address);
-                setError(null);
-                toast.success('Wallet connected!');
-            }
-        } catch (error: unknown) {
-            captureException(error, { context: 'connectFreighter' });
-            let msg = (error instanceof Error ? error.message : String(error)) || 'Connection refused';
-            // Detect user cancellation
-            if (msg.includes('User canceled') || msg.includes('canceled')) {
-                msg = 'Connection canceled by user';
-            } else if (msg.includes('not installed')) {
-                msg = 'Freighter wallet not found. Please install it first.';
-            }
-            setError(msg);
-            toast.error(msg);
+            captureException(error, { context: 'connectWallet' });
+            toast.error(
+                (error instanceof Error ? error.message : String(error)) ||
+                    'Could not connect your wallet.',
+            );
         } finally {
             setIsConnecting(false);
         }
-    };
+    }, []);
 
-    const disconnect = () => {
-        if (getE2eState()?.enabled) {
-            updateE2eState((state) => {
-                state.walletAddress = null;
-            });
-        }
-
+    const disconnect = useCallback(() => {
+        void walletAdapter.disconnect();
         setAddress(null);
-        setError(null);
+        setWalletId(null);
+        setWalletName(null);
+        setCapabilities(null);
         toast.info('Wallet disconnected from app level.');
-    };
+    }, []);
 
     return (
-        <StellarContext.Provider value={{ address, isConnecting, connect, disconnect }}>
+        <StellarContext.Provider
+            value={{
+                address,
+                walletId,
+                walletName,
+                capabilities,
+                isConnecting,
+                connect,
+                disconnect,
+            }}
+        >
             {children}
         </StellarContext.Provider>
     );

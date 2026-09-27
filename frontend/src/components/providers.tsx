@@ -7,9 +7,9 @@ import { AuthProvider } from '@/contexts/AuthContext';
 /**
  * Root Providers Component
  *
- * Includes the Auth context for Supabase and Stellar Context for Freighter
- * wallet. MotionConfig honors the user's reduced-motion preference so entrance
- * animations never fight accessibility settings.
+ * Includes the Auth context for Supabase and the Stellar context for the
+ * user's chosen wallet. MotionConfig honors the user's reduced-motion
+ * preference so entrance animations never fight accessibility settings.
  */
 export function Providers({ children }: { children: React.ReactNode }) {
     return (

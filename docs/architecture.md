@@ -12,7 +12,7 @@ How Acredia is put together, what each component is responsible for, and how dat
 graph TD
     U["Student · Institution · Verifier"]
     FE["Next.js App (React 19)"]
-    FW["Freighter Wallet"]
+    FW["Stellar Wallet (Freighter, xBull, Lobstr, …)"]
     API["Next.js API Routes (server)"]
     AUTH["Supabase Auth"]
     DB[("Supabase Postgres + RLS")]
@@ -35,7 +35,7 @@ graph TD
 |---|---|---|
 | **Frontend** | Next.js 16 (App Router), React 19, Tailwind v4 | Marketing site, dashboards, verification UI; also hosts server API routes. |
 | **Auth** | Supabase Auth | Email/password sessions, JWTs; role is resolved server-side (never from client metadata alone). |
-| **Wallet** | Freighter (`@stellar/freighter-api`) | Connects a Stellar account and signs `issue_credential` / `revoke_credential` transactions. |
+| **Wallet** | Stellar Wallets Kit (`@creit.tech/stellar-wallets-kit`) | Connects any of ten Stellar wallets and signs `issue_credential` / `revoke_credential` transactions. See [§7 Wallet integration](#7-wallet-integration). |
 | **Smart contract** | Rust + Soroban SDK (`AcrediaCredential`) | On-chain source of truth: issuance, issuer authorization, revocation, TTL/persistence, events. |
 | **Ledger / RPC** | Stellar (testnet), Soroban RPC, Horizon | Transaction settlement and contract reads. |
 | **Storage** | IPFS via Pinata | Stores the credential document + metadata (public today; encryption is on the roadmap). |
@@ -82,7 +82,7 @@ See the [roadmap backlog](../ISSUE_DRAFTS.md) for planned hardening: encrypting 
 ## 4. Data flows
 
 ### 4.1 Issue a credential
-1. A **verified institution** connects its Stellar wallet (Freighter), which is linked to the institution profile.
+1. A **verified institution** connects its Stellar wallet (any [supported wallet](#7-wallet-integration)), which is linked to the institution profile.
 2. The registrar fills the issuance form (student wallet, degree, subjects, document).
 3. The document + metadata are **pinned to IPFS** (via a server API route using the Pinata JWT), returning an IPFS URI/CID.
 4. A **SHA-256 hash** is computed over the canonical credential payload.
@@ -123,3 +123,120 @@ Network selection and endpoints are driven by environment variables and validate
 
 See **[mainnet-readiness.md](mainnet-readiness.md)** for the current readiness
 status, the remaining blockers, and the cutover procedure.
+
+---
+
+## 7. Wallet integration
+
+Acredia connects through [Stellar Wallets Kit](https://github.com/Creit-Tech/Stellar-Wallets-Kit)
+(MIT, listed in the [official Stellar wallet-integration docs](https://developers.stellar.org/docs/build/apps/wallet-integration)),
+which covers Freighter, xBull, Albedo, Rabet, Lobstr, Hana, HOT, Klever, OneKey
+and Bitget. The supported-wallet matrix, including which wallets can complete
+the `/claim` flow, is in the [README](../README.md#-supported-wallets).
+
+### Why there is an adapter
+
+Acredia previously supported exactly one wallet, and the reason was structural:
+`@stellar/freighter-api` was imported directly in three separate layers — the
+connection context, the contract-signing helper, and the `/claim` page. Adding
+a second wallet meant touching all three, so it never happened, and
+single-wallet lock-in became an adoption ceiling for a product whose whole
+promise is universal, lifelong access (ACREDIA-STELLAR#272).
+
+The fix is a boundary, not just a library swap:
+
+```
+UI / contexts / pages  ──►  WalletAdapter (src/lib/wallet/types.ts)
+                                    │
+                            src/lib/wallet/index.ts   ← E2E short-circuit
+                                    │
+                            src/lib/wallet/adapter.ts ← the ONLY kit importer
+                                    │
+                            @creit.tech/stellar-wallets-kit
+```
+
+`src/lib/wallet/` is the only place a wallet library may be imported.
+That is enforced twice, because a convention alone is what failed the first time:
+
+- **ESLint** — `no-restricted-imports` in `eslint.config.mjs` fails the build on
+  any import of the kit or `@stellar/freighter-api` outside `src/lib/wallet/`.
+- **A test** — `frontend/tests/walletBoundary.test.ts` walks the source tree and
+  asserts the same thing, because a lint rule can be silenced with an inline
+  disable comment and a test notices when it is.
+
+### Capability gaps are explicit
+
+Not every wallet implements every operation, and the kit's types do not
+distinguish them: all ten declare `signMessage`, but **Albedo and Rabet reject
+it at runtime**. `/claim` proves wallet ownership *by* signing a message, so a
+student on one of those wallets would connect successfully and dead-end at the
+final step.
+
+`src/lib/wallet/capabilities.ts` records what each wallet can actually do, and
+`useStellarAccount()` exposes it as `capabilities`, so the claim page withholds
+the form and names the problem on connect rather than after the form is filled.
+An unknown wallet id is assumed capable — a wallet added by a future kit release
+should work by default, and the cost of guessing wrong is an error at signing
+time rather than a wallet we decline to offer.
+
+### Signature normalisation
+
+Wallets disagree about what a signature *is*: base64 (most), a `Uint8Array`
+(Freighter v3), or lowercase hex (Bitget). The disagreement is silent — every
+shape is a plausible-looking value, so getting it wrong produces a failed
+*verification* rather than a parse error, which reads to the student as "your
+wallet is wrong". `normalizeSignedMessage` in `src/lib/walletOwnership.ts`
+funnels all three to base64, detecting hex by shape rather than by asking which
+wallet signed.
+
+### Network selection
+
+The kit's network comes solely from `activeNetwork` (`src/lib/stellar.ts`), never
+a literal. A kit pinned to testnet while the app runs on mainnet would sign
+against the wrong ledger, and the resulting "network mismatch" is the kind of
+error users blame on their wallet rather than on us. An unrecognised passphrase
+falls back to testnet, which fails safe: a testnet signature is worthless on
+mainnet, never the reverse.
+
+### Silent restore never prompts
+
+The chosen wallet *id* is persisted to `localStorage` — never an address, never
+a key — and restored on load. `WalletAdapter.restore()` must never open a wallet
+popup: it runs without a user gesture, so a prompt there is hostile, is commonly
+blocked by the browser, and for hardware wallets can leave a device waiting on
+input nobody asked for. The adapter reads the already-granted permission
+(`getAddress`) rather than requesting one (`fetchAddress`/`authModal`), and
+`tests/walletAdapter.test.ts` asserts the prompting calls are never reached.
+
+### Modal accessibility
+
+The kit's selection modal is themed from the app's CSS custom properties
+(`src/lib/wallet/theme.ts`) rather than shipped with its default blue-and-grey
+look — it is the screen users meet *before* deciding to trust us with a wallet.
+
+Two upstream a11y gaps are repaired in `src/lib/wallet/modalA11y.ts`, neither of
+them configurable (the kit's internal `Button` takes no label prop):
+
+1. The header's icon-only help/back/close buttons carry no accessible name — a
+   **critical** axe `button-name` violation; a screen reader announced them as
+   "button, button".
+2. The overlay has no `role="dialog"` and no `aria-modal`, so assistive
+   technology presented it as ordinary page content.
+
+Measured with axe-core against the real modal in Chromium, before and after:
+**1 critical violation → 0 violations across all axe rules**. Both repairs check
+for the *absence* of the attribute, so each becomes a no-op once the kit fixes
+it upstream.
+
+### Adding a wallet
+
+1. Register the module in `loadKit()` in `src/lib/wallet/adapter.ts` (import it
+   by subpath — `@creit.tech/stellar-wallets-kit/modules/<name>` — so unused
+   wallet code stays out of the bundle).
+2. Add its display name to `WALLET_NAMES` in the same file.
+3. Check the kit's module source for `signMessage`. If it throws, add the id to
+   `NO_MESSAGE_SIGNING` in `src/lib/wallet/capabilities.ts` — the types will not
+   tell you.
+4. Run the per-wallet manual matrix in
+   [`frontend/tests/TEST_STRATEGY.md`](../frontend/tests/TEST_STRATEGY.md#per-wallet-verification-matrix):
+   signing must be re-verified per wallet, because response shapes differ.
