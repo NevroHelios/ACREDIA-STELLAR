@@ -234,7 +234,44 @@ function initRateLimitStore(): RateLimitStore {
     // UPSTASH_REDIS_* env vars are absent — per-instance memory only.
     currentMode = 'in-memory-unconfigured';
 
-    if (process.env.NODE_ENV === 'production') {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isMainnet = (process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? '').toLowerCase() === 'mainnet';
+
+    if (isProduction && isMainnet) {
+        // Issue #282: On mainnet, missing distributed rate limiting is not
+        // merely a warning — the public verification endpoint is the most
+        // exposed unauthenticated surface in the product, and per-instance
+        // limits are trivially bypassable (budget resets on every cold start,
+        // effective limit scales with instance count).
+        //
+        // This mirrors the UnsafeConfigError philosophy in runtimeConfig.ts:
+        // a startup warning is right for dev; refusing to boot is right for
+        // a configuration that is actively dangerous in production.
+        //
+        // To allow the app to boot, either:
+        //   a) Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN, or
+        //   b) Set RATE_LIMIT_ALLOW_IN_MEMORY_ON_MAINNET=true (escape hatch
+        //      for operators who accept the risk and want to override).
+        const override = process.env.RATE_LIMIT_ALLOW_IN_MEMORY_ON_MAINNET === 'true';
+        if (!override) {
+            throw new Error(
+                '[rate-limit] FATAL: Distributed rate limiting (UPSTASH_REDIS_REST_URL / ' +
+                'UPSTASH_REDIS_REST_TOKEN) is not configured, but NEXT_PUBLIC_STELLAR_NETWORK=mainnet. ' +
+                'Per-instance in-memory rate limiting is not acceptable in mainnet production — ' +
+                'limits are not shared across serverless instances and reset on every cold start. ' +
+                'Provision Upstash Redis and set both variables in your Vercel Production ' +
+                'environment, then redeploy. To override this guard (accepting the risk), set ' +
+                'RATE_LIMIT_ALLOW_IN_MEMORY_ON_MAINNET=true.',
+            );
+        }
+
+        // eslint-disable-next-line no-console -- deliberate: always visible
+        console.error(
+            '[rate-limit] WARNING: Distributed rate limiting is NOT configured on mainnet. ' +
+            'RATE_LIMIT_ALLOW_IN_MEMORY_ON_MAINNET=true override is active. ' +
+            'Limits are per-instance and reset on cold start. Provision Upstash Redis.',
+        );
+    } else if (isProduction) {
         // Emit once per cold start. This will appear in Vercel Function logs
         // and any observability pipeline, making the misconfiguration visible.
         // eslint-disable-next-line no-console -- deliberate: this misconfiguration must be visible in Vercel Function logs at cold start, which is the only place it surfaces.
@@ -249,6 +286,15 @@ function initRateLimitStore(): RateLimitStore {
     }
 
     return createInMemoryRateLimitStore(fixedBuckets);
+}
+
+/**
+ * Returns true when the rate limiter is operating in distributed mode
+ * (i.e. Upstash Redis is configured and reachable). Returns false in any
+ * degraded state. Intended for health-check endpoints.
+ */
+export function isRateLimiterHealthy(): boolean {
+    return currentMode === 'distributed';
 }
 
 let activeStore: RateLimitStore = initRateLimitStore();
