@@ -23,7 +23,7 @@ finished, what is not, and what must be true before the switch is thrown.
 | Dependency supply chain | ✅ 0 vulnerabilities | No |
 | Automated test coverage | ✅ 515 unit + 9 E2E | No |
 | **Independent smart-contract audit** | ❌ Not started | **YES** |
-| **Key custody for the contract owner** | ❌ Not decided | **YES** |
+| **Key custody for the contract owner** | ✅ Decided — multisig, see [docs/owner-key-custody.md](./owner-key-custody.md) | **YES** (pending rehearsal) |
 | **Credential TTL / keeper strategy** | ⚠️ Partial | **YES** |
 | **Distributed rate limiting configured** | ⚠️ Not provisioned | **YES** |
 | Institution business continuity | ⚠️ Single POC | Strongly advised |
@@ -132,21 +132,19 @@ On testnet a contract bug costs nothing. On mainnet it is permanent.
 **Required:** a written third-party audit report, findings triaged, and any
 critical or high findings fixed and re-reviewed.
 
-### 3.2 Contract owner key custody — **not decided**
+### 3.2 Contract owner key custody — **decided, rehearsal pending**
 
-Today the contract owner is a single Stellar keypair held on a developer
-machine. Whoever holds it can authorise any issuer.
+The custody mechanism is now decided and documented in
+[docs/owner-key-custody.md](./owner-key-custody.md).
 
-That is acceptable for testnet and unacceptable for mainnet: losing it means
-**no new institution can ever be authorised**, and leaking it means an attacker
-can authorise themselves as an issuer.
+**Summary**: Stellar account-level multisig (2-of-3 threshold). No contract
+change is required — the existing `transfer_owner` / `accept_owner` two-step
+handover (contracts/src/lib.rs lines 283–322) is used for the transfer.
 
-**Required, decided and documented:**
-- Where the mainnet owner key lives (hardware wallet, HSM, or multisig)
-- Who can access it and under what approval
-- The recovery procedure if it is lost
-- Whether ownership transfers to a multisig at launch — the contract already
-  supports two-step `transfer_owner` / `accept_owner`
+**Remaining gate before mainnet**: the transfer must be rehearsed on testnet,
+start to finish, with the commands recorded. See §4 of
+[docs/owner-key-custody.md](./owner-key-custody.md) for the step-by-step
+procedure.
 
 ### 3.3 Credential TTL / keeper strategy — **partial**
 
