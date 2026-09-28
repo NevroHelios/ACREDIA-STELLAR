@@ -24,7 +24,7 @@ finished, what is not, and what must be true before the switch is thrown.
 | Automated test coverage | ✅ 515 unit + 9 E2E | No |
 | **Independent smart-contract audit** | ❌ Not started | **YES** |
 | **Key custody for the contract owner** | ❌ Not decided | **YES** |
-| **Credential TTL / keeper strategy** | ⚠️ Partial | **YES** |
+| **Credential TTL / keeper strategy** | ⚠️ Keeper implemented — account funding and rehearsal pending | **YES** |
 | **Distributed rate limiting configured** | ⚠️ Not provisioned | **YES** |
 | Institution business continuity | ⚠️ Single POC | Strongly advised |
 | Incident response & on-call | ❌ Not defined | Strongly advised |
@@ -148,19 +148,25 @@ can authorise themselves as an issuer.
 - Whether ownership transfers to a multisig at launch — the contract already
   supports two-step `transfer_owner` / `accept_owner`
 
-### 3.3 Credential TTL / keeper strategy — **partial**
+### 3.3 Credential TTL / keeper strategy — **keeper implemented, rehearsal pending**
 
-Soroban entries expire unless their TTL is extended. The contract exposes a
-permissionless `bump_credential` so anyone can keep a credential alive, and a
-pin-keeper worker exists — but there is no funded, monitored, scheduled process
-guaranteeing every credential is bumped before expiry.
+A scheduled TTL keeper is now implemented and registered:
 
-A credential that expires on-chain stops verifying. For a product whose promise
-is *permanent*, verifiable records, this is the most product-damaging failure
-available.
+- **`/api/cron/ttl-keeper`** runs daily at 02:00 UTC (see `vercel.json`).
+  It enumerates all non-revoked credentials from the Supabase index and calls
+  `bump_credential` on-chain for any entry approaching expiry.
+- The keeper reports its last run status in `/api/admin/stats` →
+  `stats.ttlKeeper`.
+- Alert conditions: missed run (>25 h since last run), low keeper fee balance
+  (<5 XLM), bump failures.
 
-**Required:** a scheduled keeper with funding, monitoring, alerting on failure,
-and a documented worst-case recovery path.
+**Remaining gates before mainnet**:
+1. Provision the funded keeper account (`TTL_KEEPER_ACCOUNT_PUBLIC` /
+   `TTL_KEEPER_ACCOUNT_SECRET`) and configure the env vars in Vercel.
+2. Rehearse the expiry-and-restore procedure on testnet — see
+   [docs/ops/ttl-keeper-runbook.md](./ops/ttl-keeper-runbook.md).
+3. Confirm the admin dashboard shows `ttlKeeper.lastRunStatus: succeeded`
+   after the first scheduled run.
 
 ### 3.4 Distributed rate limiting — **not provisioned**
 
