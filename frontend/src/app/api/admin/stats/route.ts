@@ -148,6 +148,15 @@ export async function GET(request: NextRequest) {
             .eq('id', 'main')
             .maybeSingle();
 
+        // Fetch TTL keeper last run state (Issue #281)
+        const { data: ttlKeeperState } = await supabase
+            .from('cron_run_log')
+            .select('run_id, status, summary, completed_at')
+            .eq('job_name', 'ttl-keeper')
+            .order('completed_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
         return NextResponse.json({
             success: true,
             stats: {
@@ -164,6 +173,15 @@ export async function GET(request: NextRequest) {
                 indexer: {
                     lastLedger: indexerState?.last_ledger || null,
                     lastUpdated: indexerState?.updated_at || null,
+                },
+                // Issue #281: TTL keeper last run summary for admin dashboard.
+                // Admins can see at a glance whether the keeper ran recently
+                // and whether credentials are at risk of expiry.
+                ttlKeeper: {
+                    lastRunId: ttlKeeperState?.run_id ?? null,
+                    lastRunAt: ttlKeeperState?.completed_at ?? null,
+                    lastRunStatus: ttlKeeperState?.status ?? null,
+                    lastRunSummary: ttlKeeperState?.summary ?? null,
                 },
                 // Issue #229: exposes which rate-limiting backend is active so
                 // admins can see immediately whether distributed limiting is

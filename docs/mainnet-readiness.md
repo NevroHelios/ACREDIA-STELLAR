@@ -120,7 +120,7 @@ no XSS sinks, no SQL injection surface, no `pull_request_target` in CI.
 
 These must be resolved before mainnet. None are code defects.
 
-### 3.1 Independent smart-contract audit — **not started**
+### 3.1 Independent smart-contract audit — **scope documented, engagement pending**
 
 The `AcrediaCredential` Soroban contract has never been reviewed by an
 independent third party. Its own tests pass, but self-testing does not establish
@@ -129,38 +129,48 @@ credentials and real money are involved.
 
 On testnet a contract bug costs nothing. On mainnet it is permanent.
 
-**Required:** a written third-party audit report, findings triaged, and any
-critical or high findings fixed and re-reviewed.
+The audit scope is now formally documented in
+[contracts/THIRD_PARTY_AUDIT.md](../contracts/THIRD_PARTY_AUDIT.md), covering:
+authorization model, TTL and archival, `batch_issue_credential` semantics,
+`upgrade`/`migrate` gating, and economic/DoS surface.
 
-### 3.2 Contract owner key custody — **not decided**
+**Required to clear this blocker:** a written third-party report published in
+`contracts/`, critical/high findings fixed and re-reviewed, and the audited
+commit tagged for the mainnet deploy.
 
-Today the contract owner is a single Stellar keypair held on a developer
-machine. Whoever holds it can authorise any issuer.
+### 3.2 Contract owner key custody — **decided, rehearsal pending**
 
-That is acceptable for testnet and unacceptable for mainnet: losing it means
-**no new institution can ever be authorised**, and leaking it means an attacker
-can authorise themselves as an issuer.
+The custody mechanism is now decided and documented in
+[docs/owner-key-custody.md](./owner-key-custody.md).
 
-**Required, decided and documented:**
-- Where the mainnet owner key lives (hardware wallet, HSM, or multisig)
-- Who can access it and under what approval
-- The recovery procedure if it is lost
-- Whether ownership transfers to a multisig at launch — the contract already
-  supports two-step `transfer_owner` / `accept_owner`
+**Summary**: Stellar account-level multisig (2-of-3 threshold). No contract
+change is required — the existing `transfer_owner` / `accept_owner` two-step
+handover (contracts/src/lib.rs lines 283–322) is used for the transfer.
 
-### 3.3 Credential TTL / keeper strategy — **partial**
+**Remaining gate before mainnet**: the transfer must be rehearsed on testnet,
+start to finish, with the commands recorded. See §4 of
+[docs/owner-key-custody.md](./owner-key-custody.md) for the step-by-step
+procedure.
 
-Soroban entries expire unless their TTL is extended. The contract exposes a
-permissionless `bump_credential` so anyone can keep a credential alive, and a
-pin-keeper worker exists — but there is no funded, monitored, scheduled process
-guaranteeing every credential is bumped before expiry.
+### 3.3 Credential TTL / keeper strategy — **keeper implemented, rehearsal pending**
 
-A credential that expires on-chain stops verifying. For a product whose promise
-is *permanent*, verifiable records, this is the most product-damaging failure
-available.
+A scheduled TTL keeper is now implemented and registered:
 
-**Required:** a scheduled keeper with funding, monitoring, alerting on failure,
-and a documented worst-case recovery path.
+- **`/api/cron/ttl-keeper`** runs daily at 02:00 UTC (see `vercel.json`).
+  It enumerates all non-revoked credentials from the Supabase index and calls
+  `bump_credential` on-chain for any entry approaching expiry.
+- The keeper reports its last run status in `/api/admin/stats` →
+  `stats.ttlKeeper`.
+- Alert conditions: missed run (>25 h since last run), low keeper fee balance
+  (<5 XLM), bump failures.
+
+**Remaining gates before mainnet**:
+1. Provision the funded keeper account (`TTL_KEEPER_ACCOUNT_PUBLIC` /
+   `TTL_KEEPER_ACCOUNT_SECRET`) and configure the env vars in Vercel.
+2. Rehearse the expiry-and-restore procedure on testnet — see
+   [docs/ops/ttl-keeper-runbook.md](./ops/ttl-keeper-runbook.md).
+3. Confirm the admin dashboard shows `ttlKeeper.lastRunStatus: succeeded`
+   after the first scheduled run.
 
 ### 3.4 Distributed rate limiting — **guard enforced, provisioning required**
 
