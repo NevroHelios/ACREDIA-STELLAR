@@ -24,8 +24,8 @@ finished, what is not, and what must be true before the switch is thrown.
 | Automated test coverage | ✅ 515 unit + 9 E2E | No |
 | **Independent smart-contract audit** | ❌ Not started | **YES** |
 | **Key custody for the contract owner** | ❌ Not decided | **YES** |
-| **Credential TTL / keeper strategy** | ⚠️ Keeper implemented — account funding and rehearsal pending | **YES** |
-| **Distributed rate limiting configured** | ⚠️ Not provisioned | **YES** |
+| **Credential TTL / keeper strategy** | ⚠️ Partial | **YES** |
+| **Distributed rate limiting configured** | ⚠️ Guard enforced — Upstash provisioning required | **YES** |
 | Institution business continuity | ⚠️ Single POC | Strongly advised |
 | Incident response & on-call | ❌ Not defined | Strongly advised |
 
@@ -172,18 +172,30 @@ A scheduled TTL keeper is now implemented and registered:
 3. Confirm the admin dashboard shows `ttlKeeper.lastRunStatus: succeeded`
    after the first scheduled run.
 
-### 3.4 Distributed rate limiting — **not provisioned**
+### 3.4 Distributed rate limiting — **guard enforced, provisioning required**
 
 `rateLimit.ts` supports Upstash Redis and correctly reports its mode
-(`distributed` / `in-memory-fallback` / `in-memory-unconfigured`), warning loudly
-at startup when unconfigured. But `UPSTASH_REDIS_*` is not set, so limits are
-per-serverless-instance and reset on cold start.
+(`distributed` / `in-memory-fallback` / `in-memory-unconfigured`).
 
-On testnet this is an annoyance. On mainnet the public verification endpoint is
-the most exposed surface in the product.
+**New in this change (Issue #282)**:
 
-**Required:** provision Upstash, set both variables, and confirm the admin
-console reports `distributed`.
+- **Mainnet boot guard**: when `NEXT_PUBLIC_STELLAR_NETWORK=mainnet` and
+  `UPSTASH_REDIS_*` are absent, the app now **fails to boot** (throws at
+  module-init time) rather than silently running per-instance. This mirrors
+  the `UnsafeConfigError` philosophy. An escape hatch
+  (`RATE_LIMIT_ALLOW_IN_MEMORY_ON_MAINNET=true`) exists for operators who
+  explicitly accept the risk.
+- **Health-check endpoint**: `GET /api/admin/rate-limit-health` (admin-only)
+  reports the current mode, whether it has degraded from `distributed` to
+  `in-memory-fallback` (Redis went away silently), and whether action is
+  required. Returns HTTP 503 on mainnet when not healthy.
+
+**To clear this blocker:**
+1. Provision Upstash Redis (free tier is sufficient for rate limiting).
+2. Set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` in Vercel →
+   Production environment.
+3. Redeploy. Confirm `/api/admin/stats` → `rateLimiterMode` = `distributed`.
+4. Confirm `/api/admin/rate-limit-health` → `healthy: true`.
 
 ---
 
