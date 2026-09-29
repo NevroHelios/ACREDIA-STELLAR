@@ -120,7 +120,7 @@ no XSS sinks, no SQL injection surface, no `pull_request_target` in CI.
 
 These must be resolved before mainnet. None are code defects.
 
-### 3.1 Independent smart-contract audit — **not started**
+### 3.1 Independent smart-contract audit — **scope documented, engagement pending**
 
 The `AcrediaCredential` Soroban contract has never been reviewed by an
 independent third party. Its own tests pass, but self-testing does not establish
@@ -129,24 +129,28 @@ credentials and real money are involved.
 
 On testnet a contract bug costs nothing. On mainnet it is permanent.
 
-**Required:** a written third-party audit report, findings triaged, and any
-critical or high findings fixed and re-reviewed.
+The audit scope is now formally documented in
+[contracts/THIRD_PARTY_AUDIT.md](../contracts/THIRD_PARTY_AUDIT.md), covering:
+authorization model, TTL and archival, `batch_issue_credential` semantics,
+`upgrade`/`migrate` gating, and economic/DoS surface.
 
-### 3.2 Contract owner key custody — **not decided**
+**Required to clear this blocker:** a written third-party report published in
+`contracts/`, critical/high findings fixed and re-reviewed, and the audited
+commit tagged for the mainnet deploy.
 
-Today the contract owner is a single Stellar keypair held on a developer
-machine. Whoever holds it can authorise any issuer.
+### 3.2 Contract owner key custody — **decided, rehearsal pending**
 
-That is acceptable for testnet and unacceptable for mainnet: losing it means
-**no new institution can ever be authorised**, and leaking it means an attacker
-can authorise themselves as an issuer.
+The custody mechanism is now decided and documented in
+[docs/owner-key-custody.md](./owner-key-custody.md).
 
-**Required, decided and documented:**
-- Where the mainnet owner key lives (hardware wallet, HSM, or multisig)
-- Who can access it and under what approval
-- The recovery procedure if it is lost
-- Whether ownership transfers to a multisig at launch — the contract already
-  supports two-step `transfer_owner` / `accept_owner`
+**Summary**: Stellar account-level multisig (2-of-3 threshold). No contract
+change is required — the existing `transfer_owner` / `accept_owner` two-step
+handover (contracts/src/lib.rs lines 283–322) is used for the transfer.
+
+**Remaining gate before mainnet**: the transfer must be rehearsed on testnet,
+start to finish, with the commands recorded. See §4 of
+[docs/owner-key-custody.md](./owner-key-custody.md) for the step-by-step
+procedure.
 
 ### 3.3 Credential TTL / keeper strategy — **keeper implemented, rehearsal pending**
 
