@@ -112,13 +112,55 @@ event) and `test_revoke_authorized_issuer_emits_event_and_deauthorizes` (authori
 emits and deauthorizes); the pre-existing `test_issuer_revoked_event` continues to cover the
 authorized path.
 
-### F-7 (Info) — No length cap on `ipfs_uri`
+### F-7 (Info) — No length cap on `ipfs_uri` — **Fixed**
 
-`issue_credential` accepts an unbounded `String` for `ipfs_uri`. An authorized issuer could push
-storage costs up with an oversized value, but they pay their own transaction fees to do so — this
-is not an attack on other users or the platform, just a self-inflicted cost. No code change
-recommended; if desired, cap URI length at the frontend/backend layer that constructs the
-`issue_credential` call, ahead of submission.
+**Before**: `issue_credential` and `batch_issue_credential` accepted an unbounded `String` for
+`ipfs_uri`, while `IssuerProfile` already capped its own fields (`MAX_ISSUER_NAME_LEN`,
+`MAX_ISSUER_PROFILE_URI_LEN`) for exactly the reason that applies here — "keep per-issuer
+storage/TTL cost small." The same reasoning was simply not applied to credentials.
+
+**Why the original "accepted" call was revised**: this pass first argued the cost was
+self-inflicted, since an issuer pays their own fees. That holds for an honest issuer, but it
+is the wrong bound. A credential is a *permanent* persistent entry whose size is paid for
+again on every TTL extension, for the life of the contract — so the cost outlives the
+transaction that caused it. More importantly, "requires an authorized issuer" is not a strong
+constraint: a compromised issuer key is precisely the scenario F-1's residual-risk note and
+F-5 already contemplate, and in that scenario the attacker has no reason to care about fees.
+Pushing the cap to the frontend also does not work, because the frontend is not the only thing
+that can call a public contract entrypoint — a cap that only exists off-chain is not a cap.
+
+**Fix**: added `MAX_IPFS_URI_LEN` (256 bytes, with the sizing rationale documented at the
+constant in [lib.rs](./src/lib.rs)) and a dedicated `UriTooLarge` error, enforced in both
+`issue_credential` and `batch_issue_credential`. 256 is the same value as
+`MAX_ISSUER_PROFILE_URI_LEN` — both fields hold the same kind of value — and leaves roughly 4x
+headroom over the 66-byte `ipfs://<CIDv1>` URIs this contract actually issues.
+
+Two deliberate choices in the fix:
+
+- **A new error code, not a reuse of `ProfileTooLarge`.** `UriTooLarge` is appended as code
+  `14`, so codes 1–13 keep their on-chain meaning and the change is ABI-additive. A caller can
+  now distinguish "your issuer profile is too big" from "this credential's URI is too big"
+  without inferring it from which entrypoint it called.
+- **Per-row rejection in the batch path, not a whole-call `Err`.** `batch_issue_credential`'s
+  documented contract is that one bad row does not discard the rest of the batch, so an
+  oversized URI is reported as a failed `BatchIssueResult` exactly as a duplicate hash is. The
+  check runs *before* the duplicate lookup, so a rejected row neither reserves its hash nor
+  consumes a token id.
+
+**Compatibility**: this is a behavioural change to a deployed contract. Confirmed safe to
+deploy before doing so — the testnet instance
+(`CARWFW27MJ3OJADAUAHI3TDFHIL62YMLVEKTUTMSNXOMH7JJTNZKC3DK`) reports `total_credentials == 0`
+and returns `CredentialNotFound` for probed token ids, so no existing credential exceeds the
+cap and none is made un-reissuable. Re-run that check against any other live instance before
+deploying there. Reads are unaffected either way: the cap is enforced only on write paths, so
+an over-cap entry written by an older build would still be retrievable. Note the asymmetry for
+any future revision — raising the cap is backward-compatible, lowering it is not.
+
+**Test coverage**: `test_issue_credential_at_max_uri_len_succeeds`,
+`test_issue_credential_rejects_oversized_uri`, `test_batch_issue_at_max_uri_len_succeeds`,
+`test_batch_issue_rejects_oversized_uri_per_row` — each entrypoint tested at exactly the cap
+and one byte over, with the over-cap cases also asserting that nothing was written (counter
+unmoved, hash still free) and that the failure is a typed error rather than a panic.
 
 ### F-8 (Info) — `read_owner()` relies on an invariant instead of a typed error
 
