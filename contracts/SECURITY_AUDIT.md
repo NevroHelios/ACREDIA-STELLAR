@@ -34,7 +34,7 @@
 | F-3 | Low | `migrate()` emitted no event | **Fixed** |
 | F-4 | Info | `initialize()` emitted no event | **Fixed** |
 | F-5 | Medium | No owner override for `revoke_credential` | **Accepted / tracked** |
-| F-6 | Low | `revoke_issuer` on a never-authorized address is a silent no-op that still emits `iss_rev` | **Accepted / tracked** |
+| F-6 | Low | `revoke_issuer` on a never-authorized address is a silent no-op that still emits `iss_rev` | **Fixed** |
 | F-7 | Info | No length cap on `ipfs_uri` | **Accepted / tracked** |
 | F-8 | Info | `read_owner()` uses `.unwrap()`, relying on an invariant rather than a typed error | **Accepted (safe today)** |
 | F-9 | Info | Dependency hygiene (`cargo audit`) | **Informational** |
@@ -95,11 +95,22 @@ platform revoked this over the issuer's head"). Tracked in `MAINNET_CHECKLIST.md
 ### F-6 (Low) — `revoke_issuer` no-op on a never-authorized address still emits `iss_rev`
 
 Calling `revoke_issuer(x)` for an `x` that was never authorized is a harmless no-op (removing a
-nonexistent storage key is safe in Soroban), but it still publishes an `iss_rev` event, which
-could mislead an off-chain indexer into believing `x` was previously authorized. Left as-is:
-fixing it changes observable event semantics for any existing integrator watching `iss_rev`
-(from "always fires on revoke_issuer" to "only fires if something changed"), which is a
-behavioral change that should be a deliberate decision alongside F-5, not a drive-by fix.
+nonexistent storage key is safe in Soroban), but it previously still published an `iss_rev`
+event, which could mislead an off-chain indexer into believing `x` was previously authorized —
+events are the on-chain audit trail, so one that claims a state change that never happened
+undermines their value for compliance and incident reconstruction.
+
+**Fix**: `revoke_issuer` now reads the authorization state (persistent, then instance) *before*
+mutating anything. It removes the `Authorized` entry and publishes `iss_rev` only when the
+address was actually authorized; revoking a never-authorized address is a true no-op that emits
+no event. The public signature is unchanged (`revoke_issuer` still returns `()`), so this is not
+an ABI change for callers — only the event semantics change, from "always fires" to "fires only
+when something changed". Revoking a genuinely authorized issuer behaves exactly as before.
+
+**Test coverage**: `test_revoke_never_authorized_issuer_emits_no_event` (no-op path emits no
+event) and `test_revoke_authorized_issuer_emits_event_and_deauthorizes` (authorized path still
+emits and deauthorizes); the pre-existing `test_issuer_revoked_event` continues to cover the
+authorized path.
 
 ### F-7 (Info) — No length cap on `ipfs_uri`
 
@@ -182,4 +193,4 @@ All added to `contracts/src/lib.rs`:
   number of successful issuances; every issued credential stays retrievable by ID and by hash with
   state matching the model.
 
-Run with `cargo test --lib` from `contracts/`. Total: 44 tests, all passing.
+Run with `cargo test --lib` from `contracts/`. Total: 46 tests, all passing.

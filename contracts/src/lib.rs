@@ -347,14 +347,30 @@ impl AcrediaCredential {
     pub fn revoke_issuer(env: Env, issuer: Address) {
         let owner = read_owner(&env);
         owner.require_auth();
-        env.storage()
+
+        let in_persistent = env
+            .storage()
             .persistent()
-            .remove(&DataKey::Authorized(issuer.clone()));
-        env.storage()
+            .get::<_, bool>(&DataKey::Authorized(issuer.clone()))
+            .unwrap_or(false);
+        let in_instance = env
+            .storage()
             .instance()
-            .remove(&DataKey::Authorized(issuer.clone()));
+            .get::<_, bool>(&DataKey::Authorized(issuer.clone()))
+            .unwrap_or(false);
+        let was_authorized = in_persistent || in_instance;
+
+        if was_authorized {
+            env.storage()
+                .persistent()
+                .remove(&DataKey::Authorized(issuer.clone()));
+            env.storage()
+                .instance()
+                .remove(&DataKey::Authorized(issuer.clone()));
+            env.events().publish((symbol_short!("iss_rev"),), issuer);
+        }
+
         extend_instance_ttl(&env);
-        env.events().publish((symbol_short!("iss_rev"),), issuer);
     }
 
     pub fn is_authorized_issuer(env: Env, issuer: Address) -> bool {
@@ -1449,6 +1465,48 @@ mod tests {
             last_event_topics(&env),
             vec![&env, symbol_short!("iss_rev").into_val(&env)]
         );
+    }
+
+    #[test]
+    fn test_revoke_never_authorized_issuer_emits_no_event() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract = AcrediaCredential.register(&env, None, ());
+        let owner = Address::generate(&env);
+        let stranger = Address::generate(&env);
+        env.as_contract(&contract, || {
+            AcrediaCredential::initialize(env.clone(), owner).unwrap();
+        });
+
+        env.as_contract(&contract, || {
+            AcrediaCredential::revoke_issuer(env.clone(), stranger);
+        });
+
+        assert_eq!(
+            last_event_topics(&env),
+            vec![&env, symbol_short!("init").into_val(&env)]
+        );
+    }
+
+    #[test]
+    fn test_revoke_authorized_issuer_emits_event_and_deauthorizes() {
+        let (env, contract, _, issuer, _) = setup();
+
+        assert!(env.as_contract(&contract, || {
+            AcrediaCredential::is_authorized_issuer(env.clone(), issuer.clone())
+        }));
+
+        env.as_contract(&contract, || {
+            AcrediaCredential::revoke_issuer(env.clone(), issuer.clone());
+        });
+
+        assert_eq!(
+            last_event_topics(&env),
+            vec![&env, symbol_short!("iss_rev").into_val(&env)]
+        );
+        assert!(!env.as_contract(&contract, || {
+            AcrediaCredential::is_authorized_issuer(env.clone(), issuer)
+        }));
     }
 
     // Issuer profile
