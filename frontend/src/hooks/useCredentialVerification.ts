@@ -25,6 +25,7 @@ export interface CredentialData {
     issued_at: string;
     revoked: boolean;
     revoked_at: string | null;
+    revocation_source?: RevocationSource;
     student_wallet_address?: string | null;
     issuer_wallet_address?: string | null;
     institution: {
@@ -36,6 +37,12 @@ export interface CredentialData {
 
 export type IntegrityStatus = 'match' | 'mismatch' | 'unavailable';
 
+export type RevocationSource = 'issuer' | 'platform' | null;
+
+function normalizeRevocationSource(value: unknown): RevocationSource {
+    return value === 'issuer' || value === 'platform' ? value : null;
+}
+
 /**
  * The `verification` half of the API response — the independent signals the
  * report presents separately from the credential's own facts.
@@ -43,6 +50,7 @@ export type IntegrityStatus = 'match' | 'mismatch' | 'unavailable';
 export interface VerificationDetail {
     verified: boolean;
     revoked: boolean;
+    revocationSource: RevocationSource;
     onChainMatch: boolean;
     onChainFound: boolean;
 }
@@ -120,6 +128,7 @@ export function useCredentialVerification(tokenId: string | null) {
                 issued_at: safe.issuedAt,
                 revoked: Boolean(safe.revoked),
                 revoked_at: safe.revokedAt || null,
+                revocation_source: normalizeRevocationSource(safe.revocationSource ?? verification?.revocationSource),
                 institution: safe.institutionName ? { name: safe.institutionName } : null,
                 issuer_authorized: verification?.issuerAuthorized,
                 issuer_status: verification?.issuerStatus,
@@ -148,6 +157,7 @@ export function useCredentialVerification(tokenId: string | null) {
             setVerificationDetail({
                 verified: Boolean(verification?.verified),
                 revoked: Boolean(verification?.revoked ?? safe.revoked),
+                revocationSource: normalizeRevocationSource(verification?.revocationSource ?? safe.revocationSource),
                 onChainMatch: Boolean(verification?.onChainMatch),
                 onChainFound: Boolean(verification?.onChainFound),
             });

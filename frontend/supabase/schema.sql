@@ -96,7 +96,8 @@ CREATE TABLE IF NOT EXISTS public.credentials (
     hash_algorithm          TEXT NOT NULL DEFAULT 'sha256:canonical-json:v1',
     issued_at               TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     revoked                 BOOLEAN DEFAULT false,
-    revoked_at              TIMESTAMP WITH TIME ZONE
+    revoked_at              TIMESTAMP WITH TIME ZONE,
+    revocation_source       TEXT CHECK (revocation_source IN ('issuer', 'platform'))
 );
 
 -- Verification logs

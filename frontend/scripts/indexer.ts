@@ -93,10 +93,26 @@ async function processEvent(event: rpc.Api.EventResponse) {
             const tokenId = topics[1]?.toString();
             const { error } = await supabase
                 .from('credentials')
-                .update({ revoked: true, revoked_at: new Date(event.ledgerClosedAt).toISOString() })
+                .update({
+                    revoked: true,
+                    revoked_at: new Date(event.ledgerClosedAt).toISOString(),
+                    revocation_source: 'issuer',
+                })
                 .eq('token_id', tokenId);
-            
+
             if (error) console.error('Error revoking credential:', error);
+        } else if (eventName === 'cred_rev_owner') {
+            const tokenId = topics[1]?.toString();
+            const { error } = await supabase
+                .from('credentials')
+                .update({
+                    revoked: true,
+                    revoked_at: new Date(event.ledgerClosedAt).toISOString(),
+                    revocation_source: 'platform',
+                })
+                .eq('token_id', tokenId);
+
+            if (error) console.error('Error revoking credential (platform override):', error);
         } else if (eventName === 'iss_auth') {
             const issuer = data?.toString();
             const { error } = await supabase
