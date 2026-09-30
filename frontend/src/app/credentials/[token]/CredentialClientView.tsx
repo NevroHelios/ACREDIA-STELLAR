@@ -73,6 +73,7 @@ export function CredentialClientView({ token }: CredentialClientViewProps) {
                         issuerWallet: c.institutionWallet || undefined,
                         issueDate: c.issueDate || '2024-01-01',
                         revoked: Boolean(c.revoked),
+                        revocationSource: c.revocationSource ?? null,
                         blockchainHash: c.blockchainHash,
                         ipfsHash: c.ipfsHash,
                         onChainHash: c.onChainHash || undefined,

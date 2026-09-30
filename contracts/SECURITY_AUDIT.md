@@ -33,7 +33,7 @@
 | F-2 | Low | `upgrade()` emitted no event | **Fixed** |
 | F-3 | Low | `migrate()` emitted no event | **Fixed** |
 | F-4 | Info | `initialize()` emitted no event | **Fixed** |
-| F-5 | Medium | No owner override for `revoke_credential` | **Accepted / tracked** |
+| F-5 | Medium | No owner override for `revoke_credential` | **Fixed** |
 | F-6 | Low | `revoke_issuer` on a never-authorized address is a silent no-op that still emits `iss_rev` | **Accepted / tracked** |
 | F-7 | Info | No length cap on `ipfs_uri` | **Fixed** |
 | F-8 | Info | `read_owner()` uses `.unwrap()`, relying on an invariant rather than a typed error | **Accepted (safe today)** |
@@ -84,13 +84,34 @@ deauthorized via `revoke_issuer`. If an issuer's signing key is compromised or l
 owner can stop that issuer from minting *new* credentials, but has no path to revoke a
 *specific bad credential* already issued by them.
 
-**Decision**: left as-is in this pass. This is a real trust-model tradeoff, not an oversight —
-adding an owner override changes who can invalidate an institution's attestations, which is a
-product/governance decision, not a pure security fix. **Recommendation**: decide before mainnet
-whether an owner-gated `admin_revoke_credential(token_id)` escape hatch is wanted for
-compromised-issuer incident response, and if so, add it with its own explicit tests and an
-event distinct from `cred_rev` (so verifiers can tell "the issuer revoked this" from "the
-platform revoked this over the issuer's head"). Tracked in `MAINNET_CHECKLIST.md`.
+**Decision**: this was a real trust-model tradeoff, not a pure security bug — adding an owner
+override changes *who* can invalidate an institution's attestations, so it needed a deliberate
+governance decision rather than a silent code change. That decision has now been made and is
+recorded in [docs/decisions/0004-owner-credential-revocation-override.md](../docs/decisions/0004-owner-credential-revocation-override.md):
+the platform adds a **narrow, auditable owner-gated escape hatch** for compromised-issuer
+incident response, without letting the platform silently masquerade as the issuer.
+
+**Fix**: added `admin_revoke_credential(token_id)`, gated on `read_owner(&env).require_auth()`
+(the owner read from storage, never a caller-supplied address). It revokes any existing,
+not-already-revoked credential regardless of whether the original issuer is still authorized —
+which is exactly the compromised-/lost-key case the issuer-only `revoke_credential` cannot handle.
+It shares the same monotonic, idempotent-safe revocation state as `revoke_credential`
+(`AlreadyRevoked` on a second attempt from *either* path, `CredentialNotFound` for an unknown
+token), and it respects the emergency pause. Crucially, it emits a **distinct** `cred_rev_owner`
+event (data: the owner address) instead of `cred_rev`, so every downstream verifier can tell
+"the issuing institution revoked this" apart from "the platform revoked this over the issuer's
+head". The off-chain indexer records the distinction on a `revocation_source` column and the
+public verification API/UI surface it, so the override can never be used to silently impersonate
+an issuer's own revocation. The public guarantee is stated in [README.md](./README.md) and on the
+public verification page.
+
+**Test coverage**: `test_admin_revoke_credential` (owner revokes an issued credential),
+`test_admin_revoke_works_after_issuer_deauthorized` (the core compromised-issuer scenario: works
+even after the issuer is deauthorized via `revoke_issuer`), `test_admin_revoke_requires_owner_auth`
+(rejected without the owner's signature, state unchanged), `test_admin_revoke_nonexistent_rejected`
+(`CredentialNotFound`), `test_admin_revoke_already_revoked_rejected` (an issuer-revoked credential
+cannot be re-revoked by the owner — monotonic across both paths), and
+`test_admin_revoke_emits_distinct_event` (the `cred_rev_owner` topic, distinct from `cred_rev`).
 
 ### F-6 (Low) — `revoke_issuer` no-op on a never-authorized address still emits `iss_rev`
 
@@ -200,4 +221,4 @@ All added to `contracts/src/lib.rs`:
   number of successful issuances; every issued credential stays retrievable by ID and by hash with
   state matching the model.
 
-Run with `cargo test --lib` from `contracts/`. Total: 48 tests, all passing.
+Run with `cargo test --lib` from `contracts/`. Total: 50 tests, all passing.

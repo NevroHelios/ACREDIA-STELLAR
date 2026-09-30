@@ -10,6 +10,7 @@ import { VerificationVerdict } from '@/components/verify/VerificationVerdict';
 import type {
     CredentialData,
     IntegrityStatus,
+    RevocationSource,
     VerificationDetail,
 } from '@/hooks/useCredentialVerification';
 
@@ -21,6 +22,17 @@ function formatDate(value: string): string {
         month: 'long',
         day: 'numeric',
     });
+}
+
+function revocationLine(source: RevocationSource, revokedAt: string | null): string {
+    const on = revokedAt ? ` on ${formatDate(revokedAt)}` : '';
+    if (source === 'platform') {
+        return `This credential was revoked by Acredia (the platform), not by the issuing institution${on}. Platform revocation is reserved for incident response, such as a compromised issuer key, and is recorded separately on-chain. It should no longer be relied on.`;
+    }
+    if (source === 'issuer') {
+        return `This credential has been revoked by the issuing institution${on} and should no longer be relied on.`;
+    }
+    return `This credential has been revoked${on} and should no longer be relied on.`;
 }
 
 /**
@@ -39,16 +51,13 @@ export function VerificationReport({
     checkedAt: string;
 }) {
     const revoked = credential.revoked;
+    const revocationSource = detail?.revocationSource ?? credential.revocation_source ?? null;
 
     return (
         <div className="space-y-4">
             <VerificationVerdict
                 kind={revoked ? 'revoked' : 'verified'}
-                line={
-                    revoked && credential.revoked_at
-                        ? `This credential has been revoked by the issuing institution on ${formatDate(credential.revoked_at)} and should no longer be relied on.`
-                        : undefined
-                }
+                line={revoked ? revocationLine(revocationSource, credential.revoked_at) : undefined}
             />
 
             <CredentialFacts credential={credential} />
@@ -61,6 +70,14 @@ export function VerificationReport({
             />
 
             <TechnicalDetails credential={credential} />
+
+            <p className="max-w-prose text-xs leading-5 text-muted-foreground">
+                How revocations are attributed: a credential can be revoked by its issuing
+                institution or, in rare incident-response cases such as a compromised issuer key, by
+                Acredia (the platform). The two are written under separate on-chain events and are
+                always labelled distinctly above — the platform can never revoke a credential
+                silently in the issuing institution&apos;s name.
+            </p>
 
             <div className="flex flex-wrap gap-3 pb-8 pt-2 print:hidden">
                 <Button asChild>
