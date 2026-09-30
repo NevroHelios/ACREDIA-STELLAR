@@ -369,6 +369,9 @@ export const CONTRACT_MAX_BATCH_SIZE = 20;
 
 /** Mirrors ContractError::CredentialAlreadyExists = 3 in contracts/src/lib.rs. */
 const CONTRACT_ERROR_CREDENTIAL_ALREADY_EXISTS = 3;
+// ContractError::UriTooLarge — the contract caps ipfs_uri at MAX_IPFS_URI_LEN
+// (256 bytes); see contracts/src/lib.rs.
+const CONTRACT_ERROR_URI_TOO_LARGE = 14;
 
 export interface BatchCredentialInputItem {
     studentAddress: string;
@@ -391,6 +394,9 @@ export interface BatchIssueOutcome {
 export function describeBatchRowError(errorCode: number | null): string {
     if (errorCode === CONTRACT_ERROR_CREDENTIAL_ALREADY_EXISTS) {
         return 'A credential with this exact hash already exists (duplicate row, or already issued previously).';
+    }
+    if (errorCode === CONTRACT_ERROR_URI_TOO_LARGE) {
+        return 'The metadata URI for this row is too long (the contract caps it at 256 bytes).';
     }
     return errorCode == null ? 'Unknown error' : `Contract error ${errorCode}`;
 }
