@@ -46,21 +46,6 @@ const MAX_BATCH_SIZE: u32 = 20;
 const MAX_ISSUER_NAME_LEN: u32 = 64;
 const MAX_ISSUER_PROFILE_URI_LEN: u32 = 256;
 
-// Maximum byte length of a credential's `ipfs_uri` (stored as
-// `Credential.ipfs_hash`). Same rationale as the issuer profile caps above,
-// and deliberately the same value as MAX_ISSUER_PROFILE_URI_LEN since both
-// hold the same kind of value: a credential is a *permanent* persistent entry
-// whose size is paid for again on every TTL extension, for the life of the
-// contract. Without a cap an authorized issuer — or a compromised issuer key
-// (see F-1's residual risk) — can inflate that cost without bound.
-//
-// Sizing: the URIs this contract is built for are `ipfs://<CIDv1>`, i.e.
-// 7 + 59 = 66 bytes (a base32 CIDv1 is 59 chars); a CIDv0 form is shorter
-// still. 256 leaves ~4x headroom for longer multibase encodings, a
-// path/filename suffix (`ipfs://<cid>/metadata.json`), or a future gateway
-// URL, while keeping the entry bounded and cheap. Raising it later is
-// backward-compatible; lowering it is not, as it would make already-issued
-// credentials un-reissuable — so prefer a generous cap over a tight one.
 const MAX_IPFS_URI_LEN: u32 = 256;
 
 #[contracterror]
@@ -80,12 +65,7 @@ pub enum ContractError {
     BatchTooLarge = 11,
     EmptyBatch = 12,
     ProfileTooLarge = 13,
-    /// `ipfs_uri` exceeded MAX_IPFS_URI_LEN. A distinct code from
-    /// ProfileTooLarge so an off-chain caller can tell "your issuer profile
-    /// is too big" from "this credential's URI is too big" without having to
-    /// infer it from which entrypoint it called. Appended (not inserted) so
-    /// existing error codes 1-13 keep their on-chain meaning.
-    UriTooLarge = 14,
+    IpfsUriTooLarge = 14,
 }
 
 #[contracttype]
@@ -463,10 +443,8 @@ impl AcrediaCredential {
             return Err(ContractError::IssuerNotAuthorized);
         }
 
-        // Bound the stored URI before anything is written (see
-        // MAX_IPFS_URI_LEN).
         if ipfs_uri.len() > MAX_IPFS_URI_LEN {
-            return Err(ContractError::UriTooLarge);
+            return Err(ContractError::IpfsUriTooLarge);
         }
 
         // Reject duplicate hashes to prevent index overwrite.
@@ -575,17 +553,12 @@ impl AcrediaCredential {
         for (i, input) in credentials.iter().enumerate() {
             let index = i as u32;
 
-            // Per-row, not a whole-call Err: an oversized URI is a bad row
-            // like a duplicate hash is, and this entrypoint's contract is
-            // that one bad row doesn't discard the rest of the batch.
-            // Checked before the duplicate lookup so an oversized row never
-            // reserves its hash in `seen_hashes` or touches storage.
             if input.ipfs_uri.len() > MAX_IPFS_URI_LEN {
                 results.push_back(BatchIssueResult {
                     index,
                     success: false,
                     token_id: 0,
-                    error_code: ContractError::UriTooLarge as u32,
+                    error_code: ContractError::IpfsUriTooLarge as u32,
                 });
                 continue;
             }
@@ -1030,6 +1003,43 @@ mod tests {
         });
     }
 
+    #[test]
+    fn test_issue_credential_at_ipfs_uri_boundary_succeeds() {
+        let (env, contract, _, issuer, student) = setup();
+        let hash = dummy_hash(&env, 70);
+        let uri = dummy_long_str(&env, MAX_IPFS_URI_LEN as usize);
+        env.as_contract(&contract, || {
+            let token_id = AcrediaCredential::issue_credential(
+                env.clone(),
+                student,
+                issuer,
+                hash.clone(),
+                uri.clone(),
+            )
+            .unwrap();
+            assert_eq!(token_id, 1);
+            let cred = AcrediaCredential::verify_credential(env.clone(), hash).unwrap();
+            assert_eq!(cred.ipfs_hash, uri);
+        });
+    }
+
+    #[test]
+    fn test_issue_credential_rejects_oversized_ipfs_uri() {
+        let (env, contract, _, issuer, student) = setup();
+        env.as_contract(&contract, || {
+            let uri = dummy_long_str(&env, (MAX_IPFS_URI_LEN + 1) as usize);
+            let result = AcrediaCredential::issue_credential(
+                env.clone(),
+                student,
+                issuer,
+                dummy_hash(&env, 71),
+                uri,
+            );
+            assert_eq!(result, Err(ContractError::IpfsUriTooLarge));
+            assert_eq!(AcrediaCredential::total_credentials(env.clone()), 0);
+        });
+    }
+
     // Batch issuance
 
     #[test]
@@ -1053,6 +1063,62 @@ mod tests {
                 assert_eq!(r.error_code, 0);
             }
             assert_eq!(AcrediaCredential::total_credentials(env.clone()), 3);
+        });
+    }
+
+    #[test]
+    fn test_batch_issue_at_ipfs_uri_boundary_succeeds() {
+        let (env, contract, _, issuer, student) = setup();
+        env.as_contract(&contract, || {
+            let items = soroban_sdk::vec![
+                &env,
+                BatchCredentialInput {
+                    student: student.clone(),
+                    credential_hash: dummy_hash(&env, 72),
+                    ipfs_uri: dummy_long_str(&env, MAX_IPFS_URI_LEN as usize),
+                },
+            ];
+            let results =
+                AcrediaCredential::batch_issue_credential(env.clone(), issuer, items).unwrap();
+            assert_eq!(results.len(), 1);
+            let r = results.get(0).unwrap();
+            assert!(r.success);
+            assert_eq!(r.token_id, 1);
+            assert_eq!(AcrediaCredential::total_credentials(env.clone()), 1);
+        });
+    }
+
+    #[test]
+    fn test_batch_issue_rejects_oversized_ipfs_uri_row_others_succeed() {
+        let (env, contract, _, issuer, student) = setup();
+        env.as_contract(&contract, || {
+            let items = soroban_sdk::vec![
+                &env,
+                BatchCredentialInput {
+                    student: student.clone(),
+                    credential_hash: dummy_hash(&env, 73),
+                    ipfs_uri: dummy_long_str(&env, (MAX_IPFS_URI_LEN + 1) as usize),
+                },
+                BatchCredentialInput {
+                    student,
+                    credential_hash: dummy_hash(&env, 74),
+                    ipfs_uri: String::from_str(&env, "ipfs://ok"),
+                },
+            ];
+            let results =
+                AcrediaCredential::batch_issue_credential(env.clone(), issuer, items).unwrap();
+            assert_eq!(results.len(), 2);
+
+            let r0 = results.get(0).unwrap();
+            assert!(!r0.success);
+            assert_eq!(r0.token_id, 0);
+            assert_eq!(r0.error_code, ContractError::IpfsUriTooLarge as u32);
+
+            let r1 = results.get(1).unwrap();
+            assert!(r1.success);
+            assert_eq!(r1.token_id, 1);
+
+            assert_eq!(AcrediaCredential::total_credentials(env.clone()), 1);
         });
     }
 
