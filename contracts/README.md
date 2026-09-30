@@ -28,7 +28,8 @@ Single unified contract combining credential issuance, registry, and verificatio
 - `revoke_issuer(issuer)` - Revoke institution authorization
 - `is_authorized_issuer(issuer)` - Check authorization status
 - `issue_credential(student, issuer, hash, uri)` - Issue new credential
-- `revoke_credential(token_id, issuer)` - Revoke issued credential
+- `revoke_credential(token_id, issuer)` - Revoke issued credential (by its issuer)
+- `admin_revoke_credential(token_id)` - Owner override to revoke any credential for compromised-issuer incident response (Owner only)
 - `get_credential(token_id)` - Get credential by ID
 - `verify_credential(hash)` - Verify credential by hash
 - `is_revoked(token_id)` - Check revocation status
@@ -293,6 +294,32 @@ soroban contract invoke \
   --issuer <INSTITUTION_ADDRESS>
 ```
 
+### Platform (Owner) Revocation Override
+
+By default only the institution that issued a credential can revoke it. `admin_revoke_credential`
+adds a narrow owner-gated override for one scenario the issuer-only path cannot handle: an issuer's
+signing key is compromised or lost, so a specific bad credential can no longer be revoked by the
+address that issued it.
+
+```bash
+soroban contract invoke \
+  --id <CONTRACT_ID> \
+  --source admin \
+  --network testnet \
+  -- \
+  admin_revoke_credential \
+  --token_id 1
+```
+
+**Public guarantee — the platform revokes only in the open.** A platform-initiated revocation emits
+a **distinct** `cred_rev_owner` event (never the issuer path's `cred_rev`). The off-chain indexer
+records which path revoked each credential (`revocation_source`: `issuer` vs `platform`), and the
+public verification API and verify page surface that distinction to every verifier. The owner can
+revoke a credential over an institution's head, but can never do so silently or while masquerading
+as the institution's own revocation. See
+[docs/decisions/0004-owner-credential-revocation-override.md](../docs/decisions/0004-owner-credential-revocation-override.md)
+and [SECURITY_AUDIT.md](./SECURITY_AUDIT.md) F-5.
+
 ## Contract Verification
 
 View deployed contracts on Stellar Expert:
@@ -469,6 +496,7 @@ event payload.
 | `iss_rev` | `revoke_issuer` | the revoked issuer address |
 | `cred_iss` | `issue_credential` | `(token_id)` topic, `(student, issuer, credential_hash, ipfs_uri)` data |
 | `cred_rev` | `revoke_credential` | `(token_id)` topic, revoking issuer as data |
+| `cred_rev_owner` | `admin_revoke_credential` | `(token_id)` topic, revoking owner as data |
 | `paused` | `pause` | none |
 | `unpaused` | `unpause` | none |
 | `upg_prop` | `propose_upgrade` | `(proposed WASM hash, earliest-execution ledger)` data |
@@ -490,13 +518,13 @@ usable; everything else assumes `initialize` has already succeeded.
 | `AlreadyInitialized` | 1 | `initialize` called on a contract that already has an owner | `initialize` |
 | `IssuerNotAuthorized` | 2 | Caller of `issue_credential` is not a currently-authorized issuer | `issue_credential` |
 | `CredentialAlreadyExists` | 3 | `credential_hash` is already indexed by another credential | `issue_credential` |
-| `CredentialNotFound` | 4 | `token_id` does not exist (or has been archived and not yet restored) | `get_credential`, `revoke_credential`, `bump_credential` |
-| `AlreadyRevoked` | 5 | Credential is already marked revoked | `revoke_credential` |
+| `CredentialNotFound` | 4 | `token_id` does not exist (or has been archived and not yet restored) | `get_credential`, `revoke_credential`, `admin_revoke_credential`, `bump_credential` |
+| `AlreadyRevoked` | 5 | Credential is already marked revoked | `revoke_credential`, `admin_revoke_credential` |
 | `UnauthorizedRevoker` | 6 | Caller is not the address recorded as the credential's issuer (checked *before* `AlreadyRevoked` — see `SECURITY_AUDIT.md`) | `revoke_credential` |
 | `NotInitialized` | 7 | Any owner-gated or state-reading call made before `initialize` has succeeded | `get_owner`, `get_pending_owner`, `is_authorized_issuer`, `total_credentials`, and (via `read_owner`) every owner-gated entrypoint |
 | `SameOwner` | 8 | `transfer_owner` called with the current owner's own address | `transfer_owner` |
 | `NoPendingOwner` | 9 | `accept_owner` called with no transfer in progress | `accept_owner` |
-| `ContractPaused` | 10 | State-changing call attempted while the contract is paused | `issue_credential`, `revoke_credential` |
+| `ContractPaused` | 10 | State-changing call attempted while the contract is paused | `issue_credential`, `revoke_credential`, `admin_revoke_credential` |
 
 Beyond `ContractError`, calls can also fail at the host level with an authorization error (no
 matching `require_auth`) before ever reaching contract logic — this is not a `ContractError`

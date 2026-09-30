@@ -33,6 +33,7 @@ export interface PublicCredentialCardData {
     issuedAt?: string;
     revoked?: boolean;
     revokedAt?: string | null;
+    revocationSource?: 'issuer' | 'platform' | null;
     isPublic?: boolean;
     blockchainHash?: string;
     ipfsHash?: string;
@@ -128,7 +129,12 @@ export function PublicCredentialCard({ credential }: PublicCredentialCardProps) 
                     <div>
                         {credential.revoked ? (
                             <Badge variant="destructive" className="flex items-center gap-1">
-                                <XCircle className="h-3.5 w-3.5" /> Revoked
+                                <XCircle className="h-3.5 w-3.5" />
+                                {credential.revocationSource === 'platform'
+                                    ? 'Revoked by platform'
+                                    : credential.revocationSource === 'issuer'
+                                      ? 'Revoked by issuer'
+                                      : 'Revoked'}
                             </Badge>
                         ) : (
                             <Badge variant="outline" className="flex items-center gap-1 text-success border-success/30 bg-success/10">

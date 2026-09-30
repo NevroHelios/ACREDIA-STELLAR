@@ -1,7 +1,7 @@
 #![no_std]
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, Address, BytesN, Env,
-    String, Vec,
+    String, Symbol, Vec,
 };
 
 // ---------------------------------------------------------------------------
@@ -360,14 +360,30 @@ impl AcrediaCredential {
     pub fn revoke_issuer(env: Env, issuer: Address) {
         let owner = read_owner(&env);
         owner.require_auth();
-        env.storage()
+
+        let in_persistent = env
+            .storage()
             .persistent()
-            .remove(&DataKey::Authorized(issuer.clone()));
-        env.storage()
+            .get::<_, bool>(&DataKey::Authorized(issuer.clone()))
+            .unwrap_or(false);
+        let in_instance = env
+            .storage()
             .instance()
-            .remove(&DataKey::Authorized(issuer.clone()));
+            .get::<_, bool>(&DataKey::Authorized(issuer.clone()))
+            .unwrap_or(false);
+        let was_authorized = in_persistent || in_instance;
+
+        if was_authorized {
+            env.storage()
+                .persistent()
+                .remove(&DataKey::Authorized(issuer.clone()));
+            env.storage()
+                .instance()
+                .remove(&DataKey::Authorized(issuer.clone()));
+            env.events().publish((symbol_short!("iss_rev"),), issuer);
+        }
+
         extend_instance_ttl(&env);
-        env.events().publish((symbol_short!("iss_rev"),), issuer);
     }
 
     pub fn is_authorized_issuer(env: Env, issuer: Address) -> bool {
@@ -453,10 +469,8 @@ impl AcrediaCredential {
             return Err(ContractError::IssuerNotAuthorized);
         }
 
-        // Bound the stored URI before anything is written (see
-        // MAX_IPFS_URI_LEN).
         if ipfs_uri.len() > MAX_IPFS_URI_LEN {
-            return Err(ContractError::UriTooLarge);
+            return Err(ContractError::IpfsUriTooLarge);
         }
 
         // Reject duplicate hashes to prevent index overwrite.
@@ -565,17 +579,12 @@ impl AcrediaCredential {
         for (i, input) in credentials.iter().enumerate() {
             let index = i as u32;
 
-            // Per-row, not a whole-call Err: an oversized URI is a bad row
-            // like a duplicate hash is, and this entrypoint's contract is
-            // that one bad row doesn't discard the rest of the batch.
-            // Checked before the duplicate lookup so an oversized row never
-            // reserves its hash in `seen_hashes` or touches storage.
             if input.ipfs_uri.len() > MAX_IPFS_URI_LEN {
                 results.push_back(BatchIssueResult {
                     index,
                     success: false,
                     token_id: 0,
-                    error_code: ContractError::UriTooLarge as u32,
+                    error_code: ContractError::IpfsUriTooLarge as u32,
                 });
                 continue;
             }
@@ -707,6 +716,38 @@ impl AcrediaCredential {
 
         env.events()
             .publish((symbol_short!("cred_rev"), token_id), issuer);
+
+        Ok(())
+    }
+
+    pub fn admin_revoke_credential(env: Env, token_id: u64) -> Result<(), ContractError> {
+        let owner = read_owner(&env);
+        owner.require_auth();
+
+        if contract_is_paused(&env) {
+            return Err(ContractError::ContractPaused);
+        }
+
+        let mut credential: Credential = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Credential(token_id))
+            .ok_or(ContractError::CredentialNotFound)?;
+
+        if credential.revoked {
+            return Err(ContractError::AlreadyRevoked);
+        }
+
+        credential.revoked = true;
+        env.storage()
+            .persistent()
+            .set(&DataKey::Credential(token_id), &credential);
+
+        extend_credential_ttl(&env, token_id, &credential.credential_hash);
+        extend_instance_ttl(&env);
+
+        env.events()
+            .publish((Symbol::new(&env, "cred_rev_owner"), token_id), owner);
 
         Ok(())
     }
@@ -1082,6 +1123,43 @@ mod tests {
         });
     }
 
+    #[test]
+    fn test_issue_credential_at_ipfs_uri_boundary_succeeds() {
+        let (env, contract, _, issuer, student) = setup();
+        let hash = dummy_hash(&env, 70);
+        let uri = dummy_long_str(&env, MAX_IPFS_URI_LEN as usize);
+        env.as_contract(&contract, || {
+            let token_id = AcrediaCredential::issue_credential(
+                env.clone(),
+                student,
+                issuer,
+                hash.clone(),
+                uri.clone(),
+            )
+            .unwrap();
+            assert_eq!(token_id, 1);
+            let cred = AcrediaCredential::verify_credential(env.clone(), hash).unwrap();
+            assert_eq!(cred.ipfs_hash, uri);
+        });
+    }
+
+    #[test]
+    fn test_issue_credential_rejects_oversized_ipfs_uri() {
+        let (env, contract, _, issuer, student) = setup();
+        env.as_contract(&contract, || {
+            let uri = dummy_long_str(&env, (MAX_IPFS_URI_LEN + 1) as usize);
+            let result = AcrediaCredential::issue_credential(
+                env.clone(),
+                student,
+                issuer,
+                dummy_hash(&env, 71),
+                uri,
+            );
+            assert_eq!(result, Err(ContractError::IpfsUriTooLarge));
+            assert_eq!(AcrediaCredential::total_credentials(env.clone()), 0);
+        });
+    }
+
     // Batch issuance
 
     #[test]
@@ -1105,6 +1183,62 @@ mod tests {
                 assert_eq!(r.error_code, 0);
             }
             assert_eq!(AcrediaCredential::total_credentials(env.clone()), 3);
+        });
+    }
+
+    #[test]
+    fn test_batch_issue_at_ipfs_uri_boundary_succeeds() {
+        let (env, contract, _, issuer, student) = setup();
+        env.as_contract(&contract, || {
+            let items = soroban_sdk::vec![
+                &env,
+                BatchCredentialInput {
+                    student: student.clone(),
+                    credential_hash: dummy_hash(&env, 72),
+                    ipfs_uri: dummy_long_str(&env, MAX_IPFS_URI_LEN as usize),
+                },
+            ];
+            let results =
+                AcrediaCredential::batch_issue_credential(env.clone(), issuer, items).unwrap();
+            assert_eq!(results.len(), 1);
+            let r = results.get(0).unwrap();
+            assert!(r.success);
+            assert_eq!(r.token_id, 1);
+            assert_eq!(AcrediaCredential::total_credentials(env.clone()), 1);
+        });
+    }
+
+    #[test]
+    fn test_batch_issue_rejects_oversized_ipfs_uri_row_others_succeed() {
+        let (env, contract, _, issuer, student) = setup();
+        env.as_contract(&contract, || {
+            let items = soroban_sdk::vec![
+                &env,
+                BatchCredentialInput {
+                    student: student.clone(),
+                    credential_hash: dummy_hash(&env, 73),
+                    ipfs_uri: dummy_long_str(&env, (MAX_IPFS_URI_LEN + 1) as usize),
+                },
+                BatchCredentialInput {
+                    student,
+                    credential_hash: dummy_hash(&env, 74),
+                    ipfs_uri: String::from_str(&env, "ipfs://ok"),
+                },
+            ];
+            let results =
+                AcrediaCredential::batch_issue_credential(env.clone(), issuer, items).unwrap();
+            assert_eq!(results.len(), 2);
+
+            let r0 = results.get(0).unwrap();
+            assert!(!r0.success);
+            assert_eq!(r0.token_id, 0);
+            assert_eq!(r0.error_code, ContractError::IpfsUriTooLarge as u32);
+
+            let r1 = results.get(1).unwrap();
+            assert!(r1.success);
+            assert_eq!(r1.token_id, 1);
+
+            assert_eq!(AcrediaCredential::total_credentials(env.clone()), 1);
         });
     }
 
@@ -1415,6 +1549,137 @@ mod tests {
     }
 
     #[test]
+    fn test_admin_revoke_credential() {
+        let (env, contract, _, issuer, student) = setup();
+        let token_id = env.as_contract(&contract, || {
+            AcrediaCredential::issue_credential(
+                env.clone(),
+                student,
+                issuer,
+                dummy_hash(&env, 20),
+                String::from_str(&env, "ipfs://admin-revoke"),
+            )
+            .unwrap()
+        });
+
+        env.as_contract(&contract, || {
+            AcrediaCredential::admin_revoke_credential(env.clone(), token_id).unwrap();
+            assert!(AcrediaCredential::is_revoked(env.clone(), token_id));
+        });
+    }
+
+    #[test]
+    fn test_admin_revoke_works_after_issuer_deauthorized() {
+        let (env, contract, _, issuer, student) = setup();
+        let token_id = env.as_contract(&contract, || {
+            AcrediaCredential::issue_credential(
+                env.clone(),
+                student,
+                issuer.clone(),
+                dummy_hash(&env, 21),
+                String::from_str(&env, "ipfs://compromised"),
+            )
+            .unwrap()
+        });
+
+        env.as_contract(&contract, || {
+            AcrediaCredential::revoke_issuer(env.clone(), issuer);
+        });
+
+        env.as_contract(&contract, || {
+            AcrediaCredential::admin_revoke_credential(env.clone(), token_id).unwrap();
+            assert!(AcrediaCredential::is_revoked(env.clone(), token_id));
+        });
+    }
+
+    #[test]
+    fn test_admin_revoke_requires_owner_auth() {
+        let (env, contract, _, issuer, student) = setup();
+        let client = AcrediaCredentialClient::new(&env, &contract);
+        let token_id = env.as_contract(&contract, || {
+            AcrediaCredential::issue_credential(
+                env.clone(),
+                student,
+                issuer,
+                dummy_hash(&env, 22),
+                String::from_str(&env, "ipfs://auth"),
+            )
+            .unwrap()
+        });
+
+        env.set_auths(&[]);
+        assert!(client.try_admin_revoke_credential(&token_id).is_err());
+
+        env.mock_all_auths();
+        assert!(!client.is_revoked(&token_id));
+    }
+
+    #[test]
+    fn test_admin_revoke_nonexistent_rejected() {
+        let (env, contract, _, _, _) = setup();
+        env.as_contract(&contract, || {
+            assert_eq!(
+                AcrediaCredential::admin_revoke_credential(env.clone(), 999),
+                Err(ContractError::CredentialNotFound)
+            );
+        });
+    }
+
+    #[test]
+    fn test_admin_revoke_already_revoked_rejected() {
+        let (env, contract, _, issuer, student) = setup();
+        let token_id = env.as_contract(&contract, || {
+            AcrediaCredential::issue_credential(
+                env.clone(),
+                student,
+                issuer.clone(),
+                dummy_hash(&env, 23),
+                String::from_str(&env, "ipfs://twice"),
+            )
+            .unwrap()
+        });
+
+        env.as_contract(&contract, || {
+            AcrediaCredential::revoke_credential(env.clone(), token_id, issuer).unwrap();
+        });
+
+        env.as_contract(&contract, || {
+            assert_eq!(
+                AcrediaCredential::admin_revoke_credential(env.clone(), token_id),
+                Err(ContractError::AlreadyRevoked)
+            );
+        });
+    }
+
+    #[test]
+    fn test_admin_revoke_emits_distinct_event() {
+        let (env, contract, _, issuer, student) = setup();
+        let token_id = env.as_contract(&contract, || {
+            AcrediaCredential::issue_credential(
+                env.clone(),
+                student,
+                issuer,
+                dummy_hash(&env, 24),
+                String::from_str(&env, "ipfs://evt"),
+            )
+            .unwrap()
+        });
+
+        env.as_contract(&contract, || {
+            AcrediaCredential::admin_revoke_credential(env.clone(), token_id).unwrap();
+        });
+
+        assert_eq!(
+            last_event_topics(&env),
+            vec![
+                &env,
+                Symbol::new(&env, "cred_rev_owner").into_val(&env),
+                token_id.into_val(&env),
+            ]
+        );
+    }
+
+    #[test]
     fn property_only_issuer_can_revoke_seeded_credentials() {
         for seed in 0u8..12 {
             let (env, contract, _, issuer, student) = setup();
@@ -1545,6 +1810,48 @@ mod tests {
             last_event_topics(&env),
             vec![&env, symbol_short!("iss_rev").into_val(&env)]
         );
+    }
+
+    #[test]
+    fn test_revoke_never_authorized_issuer_emits_no_event() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract = AcrediaCredential.register(&env, None, ());
+        let owner = Address::generate(&env);
+        let stranger = Address::generate(&env);
+        env.as_contract(&contract, || {
+            AcrediaCredential::initialize(env.clone(), owner).unwrap();
+        });
+
+        env.as_contract(&contract, || {
+            AcrediaCredential::revoke_issuer(env.clone(), stranger);
+        });
+
+        assert_eq!(
+            last_event_topics(&env),
+            vec![&env, symbol_short!("init").into_val(&env)]
+        );
+    }
+
+    #[test]
+    fn test_revoke_authorized_issuer_emits_event_and_deauthorizes() {
+        let (env, contract, _, issuer, _) = setup();
+
+        assert!(env.as_contract(&contract, || {
+            AcrediaCredential::is_authorized_issuer(env.clone(), issuer.clone())
+        }));
+
+        env.as_contract(&contract, || {
+            AcrediaCredential::revoke_issuer(env.clone(), issuer.clone());
+        });
+
+        assert_eq!(
+            last_event_topics(&env),
+            vec![&env, symbol_short!("iss_rev").into_val(&env)]
+        );
+        assert!(!env.as_contract(&contract, || {
+            AcrediaCredential::is_authorized_issuer(env.clone(), issuer)
+        }));
     }
 
     // Issuer profile

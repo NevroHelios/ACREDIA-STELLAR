@@ -287,6 +287,7 @@ export async function GET(
                 issued_at,
                 revoked,
                 revoked_at,
+                revocation_source,
                 metadata,
                 metadata_schema_version,
                 hash_algorithm,
@@ -353,6 +354,7 @@ export async function GET(
             issued_at: onChain?.issued_at ? new Date(Number(onChain.issued_at)).toISOString() : new Date().toISOString(),
             revoked: onChain?.revoked ?? false,
             revoked_at: null,
+            revocation_source: null,
             metadata: null,
             metadata_schema_version: 1,
             hash_algorithm: 'sha256:canonical-json:v1',
@@ -451,6 +453,11 @@ export async function GET(
             checks.uriMatch === true;
 
         const revoked = Boolean(onChainRevoked || credentialRecord.revoked);
+        const revocationSource: 'issuer' | 'platform' | null = revoked
+            ? (credentialRecord.revocation_source === 'issuer' || credentialRecord.revocation_source === 'platform'
+                  ? credentialRecord.revocation_source
+                  : null)
+            : null;
         const verified = onChain !== null && onChainMatch && !revoked;
         const resultType = getResultType(verified, revoked);
 
@@ -494,6 +501,7 @@ export async function GET(
                     issuedAt: credentialRecord.issued_at,
                     revoked,
                     revokedAt: credentialRecord.revoked_at,
+                    revocationSource,
                     institutionName: institution?.name ?? credentialData.institutionName ?? null,
                     credentialType: credentialData.credentialType ?? null,
                     degree: credentialData.degree ?? null,
@@ -512,6 +520,7 @@ export async function GET(
                 verification: {
                     verified,
                     revoked,
+                    revocationSource,
                     onChainMatch,
                     onChainFound: onChain !== null,
                     issuerAuthorized,

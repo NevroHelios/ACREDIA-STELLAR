@@ -34,8 +34,8 @@
 | F-3 | Low | `migrate()` emitted no event | **Fixed** |
 | F-4 | Info | `initialize()` emitted no event | **Fixed** |
 | F-5 | Medium | No owner override for `revoke_credential` | **Accepted / tracked** |
-| F-6 | Low | `revoke_issuer` on a never-authorized address is a silent no-op that still emits `iss_rev` | **Accepted / tracked** |
-| F-7 | Info | No length cap on `ipfs_uri` | **Fixed** |
+| F-6 | Low | `revoke_issuer` on a never-authorized address is a silent no-op that still emits `iss_rev` | **Fixed** |
+| F-7 | Info | No length cap on `ipfs_uri` | **Accepted / tracked** |
 | F-8 | Info | `read_owner()` uses `.unwrap()`, relying on an invariant rather than a typed error | **Accepted (safe today)** |
 | F-9 | Info | Dependency hygiene (`cargo audit`) | **Informational** |
 | F-10 | Info | Re-entrancy | **Reviewed, not applicable** |
@@ -104,72 +104,80 @@ deauthorized via `revoke_issuer`. If an issuer's signing key is compromised or l
 owner can stop that issuer from minting *new* credentials, but has no path to revoke a
 *specific bad credential* already issued by them.
 
-**Decision**: left as-is in this pass. This is a real trust-model tradeoff, not an oversight —
-adding an owner override changes who can invalidate an institution's attestations, which is a
-product/governance decision, not a pure security fix. **Recommendation**: decide before mainnet
-whether an owner-gated `admin_revoke_credential(token_id)` escape hatch is wanted for
-compromised-issuer incident response, and if so, add it with its own explicit tests and an
-event distinct from `cred_rev` (so verifiers can tell "the issuer revoked this" from "the
-platform revoked this over the issuer's head"). Tracked in `MAINNET_CHECKLIST.md`.
+**Decision**: this was a real trust-model tradeoff, not a pure security bug — adding an owner
+override changes *who* can invalidate an institution's attestations, so it needed a deliberate
+governance decision rather than a silent code change. That decision has now been made and is
+recorded in [docs/decisions/0004-owner-credential-revocation-override.md](../docs/decisions/0004-owner-credential-revocation-override.md):
+the platform adds a **narrow, auditable owner-gated escape hatch** for compromised-issuer
+incident response, without letting the platform silently masquerade as the issuer.
+
+**Fix**: added `admin_revoke_credential(token_id)`, gated on `read_owner(&env).require_auth()`
+(the owner read from storage, never a caller-supplied address). It revokes any existing,
+not-already-revoked credential regardless of whether the original issuer is still authorized —
+which is exactly the compromised-/lost-key case the issuer-only `revoke_credential` cannot handle.
+It shares the same monotonic, idempotent-safe revocation state as `revoke_credential`
+(`AlreadyRevoked` on a second attempt from *either* path, `CredentialNotFound` for an unknown
+token), and it respects the emergency pause. Crucially, it emits a **distinct** `cred_rev_owner`
+event (data: the owner address) instead of `cred_rev`, so every downstream verifier can tell
+"the issuing institution revoked this" apart from "the platform revoked this over the issuer's
+head". The off-chain indexer records the distinction on a `revocation_source` column and the
+public verification API/UI surface it, so the override can never be used to silently impersonate
+an issuer's own revocation. The public guarantee is stated in [README.md](./README.md) and on the
+public verification page.
+
+**Test coverage**: `test_admin_revoke_credential` (owner revokes an issued credential),
+`test_admin_revoke_works_after_issuer_deauthorized` (the core compromised-issuer scenario: works
+even after the issuer is deauthorized via `revoke_issuer`), `test_admin_revoke_requires_owner_auth`
+(rejected without the owner's signature, state unchanged), `test_admin_revoke_nonexistent_rejected`
+(`CredentialNotFound`), `test_admin_revoke_already_revoked_rejected` (an issuer-revoked credential
+cannot be re-revoked by the owner — monotonic across both paths), and
+`test_admin_revoke_emits_distinct_event` (the `cred_rev_owner` topic, distinct from `cred_rev`).
 
 ### F-6 (Low) — `revoke_issuer` no-op on a never-authorized address still emits `iss_rev`
 
 Calling `revoke_issuer(x)` for an `x` that was never authorized is a harmless no-op (removing a
-nonexistent storage key is safe in Soroban), but it still publishes an `iss_rev` event, which
-could mislead an off-chain indexer into believing `x` was previously authorized. Left as-is:
-fixing it changes observable event semantics for any existing integrator watching `iss_rev`
-(from "always fires on revoke_issuer" to "only fires if something changed"), which is a
-behavioral change that should be a deliberate decision alongside F-5, not a drive-by fix.
+nonexistent storage key is safe in Soroban), but it previously still published an `iss_rev`
+event, which could mislead an off-chain indexer into believing `x` was previously authorized —
+events are the on-chain audit trail, so one that claims a state change that never happened
+undermines their value for compliance and incident reconstruction.
 
-### F-7 (Info) — No length cap on `ipfs_uri` — **Fixed**
+**Fix**: `revoke_issuer` now reads the authorization state (persistent, then instance) *before*
+mutating anything. It removes the `Authorized` entry and publishes `iss_rev` only when the
+address was actually authorized; revoking a never-authorized address is a true no-op that emits
+no event. The public signature is unchanged (`revoke_issuer` still returns `()`), so this is not
+an ABI change for callers — only the event semantics change, from "always fires" to "fires only
+when something changed". Revoking a genuinely authorized issuer behaves exactly as before.
 
-**Before**: `issue_credential` and `batch_issue_credential` accepted an unbounded `String` for
-`ipfs_uri`, while `IssuerProfile` already capped its own fields (`MAX_ISSUER_NAME_LEN`,
-`MAX_ISSUER_PROFILE_URI_LEN`) for exactly the reason that applies here — "keep per-issuer
-storage/TTL cost small." The same reasoning was simply not applied to credentials.
+**Test coverage**: `test_revoke_never_authorized_issuer_emits_no_event` (no-op path emits no
+event) and `test_revoke_authorized_issuer_emits_event_and_deauthorizes` (authorized path still
+emits and deauthorizes); the pre-existing `test_issuer_revoked_event` continues to cover the
+authorized path.
 
-**Why the original "accepted" call was revised**: this pass first argued the cost was
-self-inflicted, since an issuer pays their own fees. That holds for an honest issuer, but it
-is the wrong bound. A credential is a *permanent* persistent entry whose size is paid for
-again on every TTL extension, for the life of the contract — so the cost outlives the
-transaction that caused it. More importantly, "requires an authorized issuer" is not a strong
-constraint: a compromised issuer key is precisely the scenario F-1's residual-risk note and
-F-5 already contemplate, and in that scenario the attacker has no reason to care about fees.
-Pushing the cap to the frontend also does not work, because the frontend is not the only thing
-that can call a public contract entrypoint — a cap that only exists off-chain is not a cap.
+### F-7 (Info) — No length cap on `ipfs_uri`
 
-**Fix**: added `MAX_IPFS_URI_LEN` (256 bytes, with the sizing rationale documented at the
-constant in [lib.rs](./src/lib.rs)) and a dedicated `UriTooLarge` error, enforced in both
-`issue_credential` and `batch_issue_credential`. 256 is the same value as
-`MAX_ISSUER_PROFILE_URI_LEN` — both fields hold the same kind of value — and leaves roughly 4x
-headroom over the 66-byte `ipfs://<CIDv1>` URIs this contract actually issues.
+**Before**: `issue_credential` (and `batch_issue_credential`) accepted an unbounded `String` for
+`ipfs_uri`. An authorized issuer could push storage costs up with an oversized value. They pay
+their own transaction fees, so this is a self-inflicted cost rather than an attack on other users
+— but leaving the bound to the frontend/backend means it is only enforced off-chain, and any
+caller that constructs the contract call directly (bypassing the app) faces no on-chain limit at
+all. A legitimate IPFS URI is well under 100 bytes (a CIDv1 in base32 is ~60 chars, plus the
+`ipfs://` scheme); there is no honest reason for it to run into the hundreds of bytes.
 
-Two deliberate choices in the fix:
+**Fix**: added `MAX_IPFS_URI_LEN = 256` and a typed `IpfsUriTooLarge` error, enforced on-chain in
+**both** issuance entry points. `issue_credential` rejects an oversized URI with
+`Err(IpfsUriTooLarge)` before writing any state. `batch_issue_credential` treats it as a per-row
+failure — the offending row is recorded as a failed `BatchIssueResult` with
+`error_code = IpfsUriTooLarge` and skipped, while the remaining rows are still attempted (matching
+the existing duplicate-hash handling), so one bad row does not fail the whole batch. The bound of
+256 bytes is generous for any real IPFS URI (see above) while keeping each credential a
+bounded-size persistent entry. The public signatures are unchanged, so this is not an ABI change
+for callers issuing within the limit.
 
-- **A new error code, not a reuse of `ProfileTooLarge`.** `UriTooLarge` is appended as code
-  `14`, so codes 1–13 keep their on-chain meaning and the change is ABI-additive. A caller can
-  now distinguish "your issuer profile is too big" from "this credential's URI is too big"
-  without inferring it from which entrypoint it called.
-- **Per-row rejection in the batch path, not a whole-call `Err`.** `batch_issue_credential`'s
-  documented contract is that one bad row does not discard the rest of the batch, so an
-  oversized URI is reported as a failed `BatchIssueResult` exactly as a duplicate hash is. The
-  check runs *before* the duplicate lookup, so a rejected row neither reserves its hash nor
-  consumes a token id.
-
-**Compatibility**: this is a behavioural change to a deployed contract. Confirmed safe to
-deploy before doing so — the testnet instance
-(`CARWFW27MJ3OJADAUAHI3TDFHIL62YMLVEKTUTMSNXOMH7JJTNZKC3DK`) reports `total_credentials == 0`
-and returns `CredentialNotFound` for probed token ids, so no existing credential exceeds the
-cap and none is made un-reissuable. Re-run that check against any other live instance before
-deploying there. Reads are unaffected either way: the cap is enforced only on write paths, so
-an over-cap entry written by an older build would still be retrievable. Note the asymmetry for
-any future revision — raising the cap is backward-compatible, lowering it is not.
-
-**Test coverage**: `test_issue_credential_at_max_uri_len_succeeds`,
-`test_issue_credential_rejects_oversized_uri`, `test_batch_issue_at_max_uri_len_succeeds`,
-`test_batch_issue_rejects_oversized_uri_per_row` — each entrypoint tested at exactly the cap
-and one byte over, with the over-cap cases also asserting that nothing was written (counter
-unmoved, hash still free) and that the failure is a typed error rather than a panic.
+**Test coverage**: `test_issue_credential_at_ipfs_uri_boundary_succeeds` and
+`test_issue_credential_rejects_oversized_ipfs_uri` (single-issue path, at the limit and one over);
+`test_batch_issue_at_ipfs_uri_boundary_succeeds` and
+`test_batch_issue_rejects_oversized_ipfs_uri_row_others_succeed` (batch path, at the limit and a
+mixed batch where the oversized row fails while a valid row still succeeds).
 
 ### F-8 (Info) — `read_owner()` relies on an invariant instead of a typed error
 
