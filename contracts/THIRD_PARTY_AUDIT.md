@@ -25,7 +25,7 @@ as a starting point, not as a clean bill of health:
 | F-4 | Info | `initialize()` emitted no event | **Fixed** |
 | F-5 | Medium | No owner override for `revoke_credential` | **Accepted** (governance decision) |
 | F-6 | Low | `revoke_issuer` no-op still emits `iss_rev` | **Accepted** (behavioral, tracked) |
-| F-7 | Info | No length cap on `ipfs_uri` | **Accepted** (authorized issuers only) |
+| F-7 | Info | No length cap on `ipfs_uri` | **Fixed** (`MAX_IPFS_URI_LEN`, `UriTooLarge`) |
 | F-8 | Info | `read_owner()` uses `.unwrap()` | **Accepted** (safe, invariant upheld) |
 
 ---
