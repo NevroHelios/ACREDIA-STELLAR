@@ -35,7 +35,7 @@
 | F-4 | Info | `initialize()` emitted no event | **Fixed** |
 | F-5 | Medium | No owner override for `revoke_credential` | **Accepted / tracked** |
 | F-6 | Low | `revoke_issuer` on a never-authorized address is a silent no-op that still emits `iss_rev` | **Accepted / tracked** |
-| F-7 | Info | No length cap on `ipfs_uri` | **Accepted / tracked** |
+| F-7 | Info | No length cap on `ipfs_uri` | **Fixed** |
 | F-8 | Info | `read_owner()` uses `.unwrap()`, relying on an invariant rather than a typed error | **Accepted (safe today)** |
 | F-9 | Info | Dependency hygiene (`cargo audit`) | **Informational** |
 | F-10 | Info | Re-entrancy | **Reviewed, not applicable** |
@@ -103,11 +103,29 @@ behavioral change that should be a deliberate decision alongside F-5, not a driv
 
 ### F-7 (Info) — No length cap on `ipfs_uri`
 
-`issue_credential` accepts an unbounded `String` for `ipfs_uri`. An authorized issuer could push
-storage costs up with an oversized value, but they pay their own transaction fees to do so — this
-is not an attack on other users or the platform, just a self-inflicted cost. No code change
-recommended; if desired, cap URI length at the frontend/backend layer that constructs the
-`issue_credential` call, ahead of submission.
+**Before**: `issue_credential` (and `batch_issue_credential`) accepted an unbounded `String` for
+`ipfs_uri`. An authorized issuer could push storage costs up with an oversized value. They pay
+their own transaction fees, so this is a self-inflicted cost rather than an attack on other users
+— but leaving the bound to the frontend/backend means it is only enforced off-chain, and any
+caller that constructs the contract call directly (bypassing the app) faces no on-chain limit at
+all. A legitimate IPFS URI is well under 100 bytes (a CIDv1 in base32 is ~60 chars, plus the
+`ipfs://` scheme); there is no honest reason for it to run into the hundreds of bytes.
+
+**Fix**: added `MAX_IPFS_URI_LEN = 256` and a typed `IpfsUriTooLarge` error, enforced on-chain in
+**both** issuance entry points. `issue_credential` rejects an oversized URI with
+`Err(IpfsUriTooLarge)` before writing any state. `batch_issue_credential` treats it as a per-row
+failure — the offending row is recorded as a failed `BatchIssueResult` with
+`error_code = IpfsUriTooLarge` and skipped, while the remaining rows are still attempted (matching
+the existing duplicate-hash handling), so one bad row does not fail the whole batch. The bound of
+256 bytes is generous for any real IPFS URI (see above) while keeping each credential a
+bounded-size persistent entry. The public signatures are unchanged, so this is not an ABI change
+for callers issuing within the limit.
+
+**Test coverage**: `test_issue_credential_at_ipfs_uri_boundary_succeeds` and
+`test_issue_credential_rejects_oversized_ipfs_uri` (single-issue path, at the limit and one over);
+`test_batch_issue_at_ipfs_uri_boundary_succeeds` and
+`test_batch_issue_rejects_oversized_ipfs_uri_row_others_succeed` (batch path, at the limit and a
+mixed batch where the oversized row fails while a valid row still succeeds).
 
 ### F-8 (Info) — `read_owner()` relies on an invariant instead of a typed error
 
@@ -182,4 +200,4 @@ All added to `contracts/src/lib.rs`:
   number of successful issuances; every issued credential stays retrievable by ID and by hash with
   state matching the model.
 
-Run with `cargo test --lib` from `contracts/`. Total: 44 tests, all passing.
+Run with `cargo test --lib` from `contracts/`. Total: 48 tests, all passing.
