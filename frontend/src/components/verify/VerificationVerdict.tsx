@@ -28,7 +28,7 @@ const VERDICTS: Record<VerdictKind, VerdictConfig> = {
         container: 'border-warning/30 bg-warning/8',
         chip: 'bg-warning/15 text-warning',
         title: 'Credential Revoked',
-        line: 'This credential has been revoked by the issuing institution and should no longer be relied on.',
+        line: 'This credential has been revoked and should no longer be relied on.',
     },
     'not-found': {
         icon: AlertCircle,

@@ -116,15 +116,28 @@ export function VerificationSignals({
         });
     }
 
+    const revocationSource = detail?.revocationSource ?? credential.revocation_source ?? null;
     signals.push({
         label: 'Revocation status',
-        state: credential.revoked ? 'Revoked' : 'Active',
+        state: credential.revoked
+            ? revocationSource === 'platform'
+                ? 'Revoked by platform'
+                : revocationSource === 'issuer'
+                  ? 'Revoked by issuer'
+                  : 'Revoked'
+            : 'Active',
         tone: credential.revoked ? 'caution' : 'positive',
         means: credential.revoked
-            ? 'The issuing institution has withdrawn this credential.'
+            ? revocationSource === 'platform'
+                ? 'Acredia (the platform) revoked this credential, not the issuing institution. This override is reserved for incident response — such as a compromised issuer key — and is recorded under a separate on-chain event.'
+                : revocationSource === 'issuer'
+                  ? 'The issuing institution has withdrawn this credential.'
+                  : 'This credential has been withdrawn.'
             : 'The issuing institution has not withdrawn this credential.',
         doesNotMean: credential.revoked
-            ? 'the document was forged — revocation is a decision by the issuer, not a tampering signal.'
+            ? revocationSource === 'platform'
+                ? 'the issuing institution withdrew it — a platform revocation is attributed to Acredia, never silently to the issuer.'
+                : 'the document was forged — revocation is a decision by the issuer, not a tampering signal.'
             : 'the document is untampered — that is the integrity signal below.',
     });
 
